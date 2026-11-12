@@ -105,3 +105,20 @@ test("abrir una conversación marca los mensajes entrantes como leídos antes de
   assert.match(html, /if \(rerender\) render\(true\)/);
   assert.doesNotMatch(html, /case "chat":[\s\S]{0,130}markChatRead/);
 });
+
+
+test("el login no bloquea contraseñas válidas por un mínimo de longitud del frontend", () => {
+  assert.match(html, /function validarLogin\(\)[\s\S]*?else if \(!pass\.value\)/);
+  assert.doesNotMatch(html, /function validarLogin\(\)[\s\S]*?pass\.value\.length < 8/);
+  assert.match(html, /sb\.auth\.signInWithPassword\(\{ email, password \}\)/);
+});
+
+test("la recuperación solo informa el resultado después de responder Supabase y permite reintentar", () => {
+  assert.match(html, /id="rc-hint" role="status" aria-live="polite"/);
+  assert.match(html, /const \{ error \} = await sb\.auth\.resetPasswordForEmail/);
+  assert.match(html, /if \(error\)[\s\S]*?No pudimos procesar la solicitud/);
+  assert.match(html, /La solicitud fue aceptada/);
+  assert.match(html, /btn\.disabled = false/);
+  assert.doesNotMatch(html, /async function recuperarForm\(\)[\s\S]*?go\("#\/login"\)/);
+  assert.doesNotMatch(html, /Te enviamos un enlace para recuperar tu contraseña a tu dirección de email/);
+});

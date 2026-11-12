@@ -59,7 +59,7 @@ test("las rutas privadas exigen una sesión de Supabase", () => {
   assert.doesNotMatch(html, /DEMO_VISIBLE|DEMO_HABILITADO|ME\.demo/);
 });
 
-test("Sobre vos con IA se renderiza en staging y producción y comunica el tratamiento del texto", () => {
+test("Sobre vos con IA está habilitado en ambos entornos y comunica el tratamiento del texto", () => {
   const helper = section(html, "function sobreIA(", "function writeHere(", "sobreIA");
   assert.doesNotMatch(helper, /ENTORNO !== "staging"/);
   assert.match(helper, /Mejorar con IA/);

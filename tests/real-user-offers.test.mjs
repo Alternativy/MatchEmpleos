@@ -174,6 +174,7 @@ test("la verificación pública es de solo lectura y se sincroniza desde revisio
 
 test("el uso anónimo de IA queda en tabla privada con RLS y RPC exclusivas de service_role", () => {
   assert.match(anonymousSql, /create table if not exists private\.anonymous_ai_usage/i);
+  assert.match(anonymousSql, /revoke all on schema private from public, anon/i);
   assert.match(anonymousSql, /alter table private\.anonymous_ai_usage enable row level security/i);
   assert.match(anonymousSql, /revoke all on table private\.anonymous_ai_usage from public, anon, authenticated/i);
   assert.match(anonymousSql, /revoke all on function public\.reserve_anonymous_ai_usage\(text\) from public, anon, authenticated/i);

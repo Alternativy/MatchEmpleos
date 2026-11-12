@@ -59,9 +59,9 @@ test("las rutas privadas exigen una sesión de Supabase", () => {
   assert.doesNotMatch(html, /DEMO_VISIBLE|DEMO_HABILITADO|ME\.demo/);
 });
 
-test("Sobre vos con IA solo se renderiza en staging y comunica el tratamiento del texto", () => {
+test("Sobre vos con IA está habilitado en ambos entornos y comunica el tratamiento del texto", () => {
   const helper = section(html, "function sobreIA(", "function writeHere(", "sobreIA");
-  assert.match(helper, /if \(ENTORNO !== "staging"\) return ""/);
+  assert.doesNotMatch(helper, /ENTORNO !== "staging"/);
   assert.match(helper, /Mejorar con IA/);
   assert.match(helper, /Tu texto se envía al servicio de IA/);
   assert.match(helper, /El perfil no cambia hasta que elijas aplicar la sugerencia/);

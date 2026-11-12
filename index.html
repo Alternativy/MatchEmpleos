@@ -4,6 +4,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
+    <link rel="icon" href="favicon.ico" sizes="any" />
     <link rel="manifest" href="img/site.webmanifest" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -3427,7 +3428,7 @@
                       <li>Creá tu perfil de postulante verificado.</li>
                       <li>Escogé categorías de trabajo preferidas.</li>
                       <li>Podés elegir o no una postulación.</li>
-                      <li>Tenés 5 Postulaciones por día.</li>
+                      <li>Tenés 5 postulaciones por semana.</li>
                       <li>Posibilidad de dialogar con la empresa.</li>
                       <li>La empresa está obligada a responderte, vos tenés derecho a saber.</li>
                       <li>Si te aceptan, felicidades, hay MATCH.</li>
@@ -3458,11 +3459,11 @@
                   <p>Tu próxima oportunidad puede estar más cerca de lo que pensás.</p>
                   <div class="lp-register-card lp-register-candidate">
                     <h3>Perfil Postulante</h3>
-                    <a href="#/registro/c/1">Registrar usuario</a>
+                    <a href="#/registro">Registrar usuario</a>
                   </div>
                   <div class="lp-register-card lp-register-company">
                     <h3>Perfil Empresa</h3>
-                    <a href="#/registro/e/1">Registrar empresa</a>
+                    <a href="#/registro">Registrar empresa</a>
                   </div>
                 </div>
               </div>
@@ -3592,9 +3593,12 @@
             const chatsR = await sb
               .from("chats")
               .select(
-                "id,postulacion_id,candidato_id,empresa_id,candidato:perfiles!candidato_id(id,nombre,avatar_url,datos)",
+                "id,postulacion_id,candidato_id,empresa_id,match,created_at,candidato:perfiles!candidato_id(id,nombre,avatar_url,datos)",
               );
             if (chatsR.error) throw chatsR.error;
+            // Tasa y demora se calculan en el servidor con la misma fórmula que ven los postulantes
+            const repR = await sb.rpc("reputacion_empresas", { p_ids: [ME.id] });
+            if (repR.error) throw repR.error;
             return {
               perfiles: perfiles.data,
               postulaciones,
@@ -3603,6 +3607,7 @@
               candidatos,
               mensajes: mensajes.data,
               chats: chatsR.data,
+              reputacion: repR.data || [],
             };
           }
           const [perfiles, postulaciones, busquedas, candidatosEstado, mensajes] = await Promise.all([
@@ -3628,7 +3633,7 @@
           const chatsR = await sb
             .from("chats")
             .select(
-              "id,postulacion_id,candidato_id,empresa_id,empresa:perfiles!empresa_id(id,nombre,avatar_url,datos)",
+              "id,postulacion_id,candidato_id,empresa_id,match,created_at,empresa:perfiles!empresa_id(id,nombre,avatar_url,datos)",
             );
           if (chatsR.error) throw chatsR.error;
           const idsEmpresasVerificables = [...new Set([...empresaIds, ...chatsR.data.map((ch) => ch.empresa_id)])];
@@ -3641,7 +3646,14 @@
           // El cupo semanal del postulante se calcula en el servidor.
           const cupoR = await sb.rpc("cupo_actual");
           if (cupoR.error) throw cupoR.error;
+          let reputacion = [];
+          if (idsEmpresasVerificables.length) {
+            const repR = await sb.rpc("reputacion_empresas", { p_ids: idsEmpresasVerificables });
+            if (repR.error) throw repR.error;
+            reputacion = repR.data || [];
+          }
           return {
+            reputacion,
             perfiles: perfiles.data,
             postulaciones: postulaciones.data,
             busquedas: busquedas.data,
@@ -3677,20 +3689,6 @@
               return data;
             });
         },
-        guardarPostulacion(post, oid, chat) {
-          return persistir(
-            sb
-              .from("postulaciones")
-              .update({
-                estado: post.estado,
-                datos: { post, chat: chat || null },
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", post.id),
-            "guardarPostulacion",
-          );
-        },
-
         // El cupo lo maneja el servidor (ver postular y cupo_actual)
         setCupo(cupo) {
           return null;
@@ -3723,9 +3721,11 @@
             return true;
           });
         },
+        // Devuelve true si se guardó. El servidor rechaza publicar con postulaciones sin responder.
         guardarBusqueda(b) {
-          return persistir(
-            sb.from("busquedas").upsert({
+          return sb
+            .from("busquedas")
+            .upsert({
               id: b.id,
               empresa_id: ME.id,
               puesto: b.puesto,
@@ -3734,42 +3734,49 @@
               turno: b.turno || [],
               total: b.total,
               estado: b.estado,
-            }),
-            "guardarBusqueda",
-          );
+              plazo: b.plazo || 3,
+            })
+            .then(({ error }) => {
+              if (error) {
+                console.error("[db] guardarBusqueda", error);
+                toast(
+                  /pendientes_sin_responder/.test(error.message || "")
+                    ? "Primero respondé las postulaciones pendientes."
+                    : "No pudimos guardar la búsqueda. Probá de nuevo.",
+                );
+                return false;
+              }
+              return true;
+            });
         },
 
-        guardarCandidato(id, corto, estado) {
-          return persistir(
-            sb.from("candidatos_estado").upsert({
-              id,
-              empresa_id: ME.id,
-              corto,
-              estado,
-              updated_at: new Date().toISOString(),
-            }),
-            "guardarCandidato",
-          );
-        },
-        cargarPostulacion(id) {
-          return persistir(
-            sb.from("postulaciones").select("*").eq("id", id).maybeSingle(),
-            "cargarPostulacion",
-          );
-        },
-        actualizarPostulacion(row) {
-          return persistir(
-            sb
-              .from("postulaciones")
-              .update({ estado: row.estado, datos: row.datos, updated_at: new Date().toISOString() })
-              .eq("id", row.id),
-            "actualizarPostulacion",
-          );
+        // Responde una postulación: la marca como respondida, guarda el texto y abre el chat si corresponde
+        responder(id, tipo, texto) {
+          return sb.rpc("responder_postulacion", { p_id: id, p_tipo: tipo, p_texto: texto }).then(({ error }) => {
+            if (error) {
+              console.error("[db] responder", error);
+              toast("No pudimos enviar la respuesta. Probá de nuevo.");
+              return false;
+            }
+            return true;
+          });
         },
 
-        // La tasa de respuesta la calcula el servidor (trigger en postulaciones y candidatos_estado)
-        setTasa(tasa) {
-          return null;
+        // "Te vieron": la empresa abrió el perfil del postulante
+        marcarVista(id) {
+          return sb.rpc("marcar_vista", { p_id: id }).then(({ error }) => {
+            if (error) console.warn("[db] marcarVista", error);
+          });
+        },
+
+        eliminarCuenta() {
+          return sb.rpc("eliminar_mi_cuenta").then(({ error }) => {
+            if (error) {
+              console.error("[db] eliminarCuenta", error);
+              return false;
+            }
+            return true;
+          });
         },
 
         nuevoMensaje(chatKey, de, texto, h) {
@@ -3837,6 +3844,53 @@
           const d = new Date();
           return d.getHours().toString().padStart(2, "0") + ":" + d.getMinutes().toString().padStart(2, "0");
         };
+        const DIA_MS = 86400000;
+        // "hoy", "ayer", "hace 3 días" o la fecha
+        function fechaRel(iso) {
+          if (!iso) return "";
+          const d = new Date(iso);
+          if (Number.isNaN(d.getTime())) return "";
+          const hoy = new Date();
+          const dias = Math.round((new Date(hoy.toDateString()) - new Date(d.toDateString())) / DIA_MS);
+          if (dias <= 0) return "hoy";
+          if (dias === 1) return "ayer";
+          if (dias < 7) return `hace ${dias} días`;
+          return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+        }
+        function diaChat(iso) {
+          const r = fechaRel(iso || new Date().toISOString());
+          return r === "hoy" ? "Hoy" : r === "ayer" ? "Ayer" : r.charAt(0).toUpperCase() + r.slice(1);
+        }
+        function diasTxt(d) {
+          if (d == null) return "";
+          if (d < 1) return "menos de 1 día";
+          const n = Math.round(d);
+          return n + (n === 1 ? " día" : " días");
+        }
+        // Días que le quedan a la empresa para responder (negativo si ya venció)
+        function diasRestantes(creada, plazo) {
+          const vence = new Date(creada || Date.now()).getTime() + (plazo || 3) * DIA_MS;
+          const diferencia = vence - Date.now();
+          // Una vez superado el vencimiento, nunca mostrar "Vence hoy".
+          return diferencia <= 0 ? -1 : Math.ceil(diferencia / DIA_MS);
+        }
+        function venceTxt(q) {
+          return q < 0 ? "Plazo vencido" : q === 0 ? "Vence hoy" : `Vence en ${q} día${q === 1 ? "" : "s"}`;
+        }
+        // Conjuntos guardados por usuario en el navegador (descartadas, notificaciones leídas, matches vistos)
+        function leerSet(nombre) {
+          try { return new Set(JSON.parse(localStorage.getItem(nombre + ":" + ME.id) || "[]")); }
+          catch { return new Set(); }
+        }
+        function guardarSet(nombre, set) {
+          try { localStorage.setItem(nombre + ":" + ME.id, JSON.stringify([...set])); }
+          catch (err) { console.warn("[local] No se pudo guardar " + nombre, err); }
+        }
+        // Lo que ve el postulante sobre cómo responde una empresa
+        function reputacionTxt(o) {
+          if (o.tasa == null) return "Empresa nueva: todavía no tiene historial de respuestas";
+          return `Contesta a tiempo el ${o.tasa}% de las postulaciones${o.dias != null ? ", en " + diasTxt(o.dias) + " promedio" : ""}`;
+        }
 
         /* ---------- Textos legales unificados (postulante + empresa) ---------- */
         const LEGAL = {
@@ -4224,7 +4278,6 @@
             : `<div class="reg-top"><span class="reg-bar"></span>${backBtn(back)}</div>`;
         }
         function sobreIA(inputId, initialValue = "") {
-          if (ENTORNO !== "staging") return "";
           const ai = ME.datos?.ai || {};
           const yaAplicada = inputId === "rc-sobre" ? regDraftAIUsed
             : inputId === "re-desc" ? regDraftCompanyAIUsed
@@ -4284,7 +4337,7 @@
             }[step] || "#/registro";
           let b = "";
           if (step === "1")
-            b = `${regTop(back, true)}<h1 class="t-display reg-h">Creá tu cuenta</h1><p class="t-note reg-sub">Vas a registrarte con <strong>${esc(regDraft["rg-mail"] || regDraft["rc-mail"] || "tu correo")}</strong></p><div class="rstack">${regField("rc-nom", "Nombre")}${regField("rc-ape", "Apellido")}</div><p class="hint" id="rc-hint" role="status" aria-live="polite"></p><button class="btn pri reg-cta" data-go="#/registro/c/2">Continuar</button>`;
+            b = `${regTop(back, true)}<h1 class="t-display reg-h">Creá tu cuenta</h1><p class="t-note reg-sub">Vas a registrarte con <strong>${esc(regDraft["rg-mail"] || regDraft["rc-mail"] || "tu correo")}</strong></p><div class="rstack">${regField("rc-nom", "Nombre")}${regField("rc-ape", "Apellido")}</div><p class="hint" id="rc-hint" role="status" aria-live="polite"></p><button class="btn pri reg-cta" data-go="#/registro/c/2" data-req="rc-nom,rc-ape" data-req-msg="Completá tu nombre y apellido para continuar.">Continuar</button>`;
           if (step === "2")
             b = `${regTop(back, true)}<h1 class="t-display reg-h">Datos Personales</h1><div class="rstack">${regField("rc-edad", "Edad", "number")}${regField("rc-ubi", "Ubicación/Residencia")}</div><p style="text-align:center;font-size:14px;margin:30px 0 14px;color:var(--t2)">¿Tenés experiencia laboral?</p><div class="row2"><button class="btn pri" data-go="#/registro/c/exp">Si</button><button class="btn pri" data-go="#/registro/c/3">No</button></div><p style="text-align:center;font-size:14px;margin-top:24px;color:var(--t2);line-height:1.6">¡No necesitás experiencia para empezar a encontrar tu Match!</p>`;
           if (step === "exp")
@@ -4304,7 +4357,7 @@
           const cta = `<button class="btn pri reg-cta" data-go="${next}">Continuar</button>`;
           let b = "";
           if (n === 1)
-            b = `${regTop(back, true)}<h1 class="t-display reg-h">Creá tu cuenta</h1><p class="t-note reg-sub">Cuenta de empresa para <strong>${esc(regDraft["rg-mail"] || regDraft["re-mail"] || "tu correo")}</strong></p><div class="rstack">${regField("re-resp", "Nombre del responsable")}${regField("re-nom", "Nombre de la empresa")}</div><p class="hint" id="re-hint" role="status" aria-live="polite"></p><button class="btn pri reg-cta" data-go="${next}">Continuar</button>`;
+            b = `${regTop(back, true)}<h1 class="t-display reg-h">Creá tu cuenta</h1><p class="t-note reg-sub">Cuenta de empresa para <strong>${esc(regDraft["rg-mail"] || regDraft["re-mail"] || "tu correo")}</strong></p><div class="rstack">${regField("re-resp", "Nombre del responsable")}${regField("re-nom", "Nombre de la empresa")}</div><p class="hint" id="re-hint" role="status" aria-live="polite"></p><button class="btn pri reg-cta" data-go="${next}" data-req="re-resp,re-nom" data-req-msg="Completá el nombre del responsable y el de la empresa para continuar.">Continuar</button>`;
           if (n === 2)
             b = `${regTop(back, true)}<h1 class="t-display reg-h">Contanos sobre tu empresa</h1><div class="rstack">${regField("re-rubro", "Rubro")}${regField("re-ubi", "Ubicación")}${regField("re-tam", "Tamaño de la empresa")}</div>${cta}`;
           if (n === 3)
@@ -4335,12 +4388,12 @@
           return `<article class="offer swipe-card" data-swipe-card="${esc(o.id)}">
     <span class="swipe-badge like">Me interesa</span>
     <span class="swipe-badge nope">Descartar</span>
-    ${o.foto ? `<img loading="lazy" decoding="async" class="ph" src="${o.foto}" alt="Preparación de café en ${esc(o.emp)}" draggable="false">` : ""}
+    ${o.foto ? `<img loading="lazy" decoding="async" class="ph" src="${o.foto}" alt="Foto de la búsqueda en ${esc(o.emp)}" draggable="false">` : ""}
     <div class="bd">
       <div class="co">${o.logo ? `<img loading="lazy" decoding="async" src="${esc(o.logo)}" alt="" draggable="false">` : '<span class="sq"></span>'}${esc(o.emp)}${verifiedMark(o.verificada)}</div>
       <h2>${esc(o.puesto)}</h2>
       <div class="chips">${o.fchips.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
-      <div class="strip"><span class="dot"></span><span>Contesta el ${o.tasa}% de las postulaciones, en ${o.dias} días promedio</span></div>
+      <div class="strip"><span class="dot"></span><span>${esc(reputacionTxt(o))}</span></div>
       <button class="btn out sm only-m" data-go="#/c/oferta/${o.id}">Ver detalle</button>
     </div></article>`;
         }
@@ -4354,13 +4407,15 @@
         }
         function offerDetail(o, withBack, showActions = true) {
           const ya = applied(o.id);
-          return `${withBack ? `<div class="hdr">${backBtn("#/c/feed")}<span class="side">Guardar</span></div>` : ""}
-  <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px"><span class="sq" style="width:40px;height:40px;border-radius:10px"></span><div><p style="font-weight:500">${esc(o.emp)}${verifiedMark(o.verificada)}</p><p class="t-note">${esc(o.meta)}</p></div></div>
+          return `${withBack ? `<div class="hdr">${backBtn("#/c/feed")}</div>` : ""}
+  <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">${o.logo ? `<img loading="lazy" decoding="async" src="${esc(o.logo)}" alt="" style="width:40px;height:40px;border-radius:10px;object-fit:cover;background:#fff">` : '<span class="sq" style="width:40px;height:40px;border-radius:10px"></span>'}<div><p style="font-weight:500">${esc(o.emp)}${verifiedMark(o.verificada)}</p><p class="t-note">${esc(o.meta)}</p></div></div>
   <h1 class="t-title" style="margin-bottom:16px">${esc(o.puesto)}</h1>
   <div class="chips" style="margin-bottom:16px">${o.chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
   <div class="resp-box"><p class="lbl">Esta empresa responde:</p>
-    <div class="row2"><div><p class="bignum">${o.tasa}%</p><p class="t-note">de las postulaciones</p></div><div><p class="bignum">${o.dias} días</p><p class="t-note">tarda en promedio</p></div></div>
-    <p style="font-size:13px;margin-top:12px">Si no te contesta en 7 días, su tasa baja y vos recibís un aviso.</p></div>
+    ${o.tasa == null
+      ? `<p class="bignum" style="font-size:22px">Empresa nueva</p><p class="t-note">Todavía no tiene historial de respuestas en Match Empleos.</p>`
+      : `<div class="row2"><div><p class="bignum">${o.tasa}%</p><p class="t-note">contestadas a tiempo</p></div><div><p class="bignum">${o.dias == null ? "—" : diasTxt(o.dias)}</p><p class="t-note">tarda en promedio</p></div></div>`}
+    <p style="font-size:13px;margin-top:12px">Se comprometió a contestarte en ${o.plazo} días. Si no lo hace, su tasa baja y vos recibís un aviso.</p></div>
   <h2 class="t-sec">¿De qué se trata?</h2><p style="color:var(--t2);line-height:1.55">${esc(o.desc)}</p>
   ${showActions ? `<button class="btn pri" style="margin-top:20px" data-apply="${o.id}" ${ya || S.c.cupo <= 0 ? "disabled" : ""}>${ya ? "Ya te postulaste" : "Me interesa"}</button><p class="cupo">${cupoTxt()}</p>` : ""}`;
         }
@@ -4384,8 +4439,9 @@
           return shell("c", "#/c/feed", `<div style="max-width:560px">${offerDetail(o, true, true)}</div>`);
         }
         function cMatch(id) {
-          const o = offerById(id) || S.c.ofertas[0];
-          if (!o) return cFeed();
+          const ch = S.c.chats[id];
+          if (!ch) return cFeed();
+          const o = { emp: ch.con, puesto: ch.puesto, verificada: ch.verificada, logo: ch.avatar, chat: id };
           return `<div class="app auth cand"><div class="match-top">${'<svg viewBox="0 0 390 180" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H390V24C300 24 240 40 170 70C90 104 30 150 0 180Z" fill="#E9E9E9"/><path d="M0 0H390V4C310 4 250 22 180 52C100 86 30 132 0 160Z" fill="#36F48C"/></svg>'}</div>
   <main class="screen"><div class="match-hero">
     <h1>¡Hay match!</h1>
@@ -4393,7 +4449,7 @@
     <div class="match-pair"><img loading="lazy" decoding="async" src="${fotoSrc()}" alt="${esc(miNombre())}" data-action="foto" title="Cambiar foto"><i></i><img loading="lazy" decoding="async" src="${o.logo || phSrc()}" alt="${esc(o.emp)}"></div>
     <p class="note-match" style="max-width:342px">Ya podés coordinar los próximos pasos en el chat.</p>
   </div>
-  <div class="stack" style="margin-top:60px"><button class="btn pri" data-go="#/c/chat/${o.id}">Escribirle ahora</button><button class="btn out" data-go="#/c/feed">Seguir viendo búsquedas</button></div>
+  <div class="stack" style="margin-top:60px"><button class="btn pri" data-go="#/c/chat/${o.chat}">Escribirle ahora</button><button class="btn out" data-go="#/c/feed">Seguir viendo búsquedas</button></div>
   </main><div class="dock plain">${waveSVG("", "#36F48C", "#E9E9E9")}<div class="band"></div></div></div>`;
         }
         let postFilter = "Todas";
@@ -4416,7 +4472,7 @@
     <p class="post-foot">${esc(p.pie || "")}</p></div></a>${reportButton(p.id, p.empresaId, p.chat || "")}</div>`,
             )
             .join("");
-          const inner = `<div class="hdr"><h1 style="font-size:18px;font-weight:600">Mis postulaciones</h1><span class="side" style="color:var(--t2)">${S.c.posts.length} activas</span></div>
+          const inner = `<div class="hdr"><h1 style="font-size:18px;font-weight:600">Mis postulaciones</h1><span class="side" style="color:var(--t2)">${S.c.posts.length} enviada${S.c.posts.length === 1 ? "" : "s"}</span></div>
     <div class="chips" style="margin-bottom:18px">${["Todas", "Sin respuesta", "Con match"].map((x) => `<button class="chip" data-filter="${x}" aria-pressed="${x === f}">${x}</button>`).join("")}</div>
     <div class="stack grid2">${items || '<div class="empty">No tenés postulaciones en este filtro.</div>'}</div>
     <p class="cupo">${cupoTxt()}</p>`;
@@ -4452,9 +4508,19 @@
             ? "Esta conversación nació de un match. Los dos dijeron que sí."
             : kind === "e"
               ? `Le pediste más información a ${esc(c.con.split(" ")[0])}.`
-              : `Respondieron tu postulación a ${esc(c.puesto)}.`;
+              : `${esc(c.con)} quiere saber un poco más sobre vos antes de decidir sobre ${esc(c.puesto)}.`;
           const denuncia = kind === "c" ? reportButton(c.postId, c.empresaId, id) : "";
-          return `<div class="chat-report-row">${denuncia}</div><div class="chat-wrap" data-chatlog><p class="day">Hoy</p>${c.msgs.map((m) => `<div class="fila ${m.de}"><div class="bub ${m.de}">${esc(m.t)}</div></div>`).join("")}<p class="note-match"><span class="dot"></span><span>${note}</span></p></div>
+          return `<div class="chat-report-row">${denuncia}</div><div class="chat-wrap" data-chatlog>${(() => {
+            let dia = null;
+            return c.msgs
+              .map((m) => {
+                const d = diaChat(m.f);
+                const sep = d !== dia ? `<p class="day">${esc(d)}</p>` : "";
+                dia = d;
+                return `${sep}<div class="fila ${m.de}"><div class="bub ${m.de}">${esc(m.t)}</div></div>`;
+              })
+              .join("") || `<p class="day">Hoy</p>`;
+          })()}<p class="note-match"><span class="dot"></span><span>${note}</span></p></div>
   <form class="composer" data-form="chat" data-kind="${kind}" data-id="${id}"><label class="vh" for="msg-${kind}">Mensaje</label><input id="msg-${kind}" placeholder="Escribí un mensaje" autocomplete="off"><button class="btn pri sm" type="submit">Enviar</button></form>`;
         }
         function mensajes(kind, id) {
@@ -4522,8 +4588,9 @@
             ["Privacidad", `#/${kind}/legal/privacidad`],
             ["Ayuda", `#/${kind}/legal/ayuda`],
             ["Cerrar sesión", `#/${kind}/salir`],
+            ["Eliminar mi cuenta", `#/${kind}/eliminar`],
           ];
-          const inner = `<div style="max-width:720px">${profHead(kind)}${all.map(([l, h], i) => `<button class="rowline${!e && i === 4 ? " dim" : ""}" data-go="${h}"><span>${l}</span><span class="v">›</span></button>`).join("")}</div>`;
+          const inner = `<div style="max-width:720px">${profHead(kind)}${all.map(([l, h], i) => `<button class="rowline${i >= 4 ? " dim" : ""}" data-go="${h}"><span>${l}</span><span class="v">›</span></button>`).join("")}</div>`;
           return shell(kind, e ? "#/e/empresa" : "#/c/perfil", inner);
         }
         function cDatos() {
@@ -4580,6 +4647,48 @@
           const inner = `<div style="max-width:560px">${profHead(kind)}<h2 style="font-size:20px;font-weight:500;margin-bottom:6px">¿Querés cerrar sesión?</h2><p style="line-height:1.6;margin-bottom:28px;${kind === "e" ? "" : "color:var(--t2)"}">Si cerrás sesión, podrás volver a ingresar cuando quieras con tus datos de acceso.<br>Tu perfil, tus Matches y tus preferencias permanecerán guardados.</p><button class="btn pri" data-action="logout">Cerrar sesión</button></div>`;
           return shell(kind, kind === "e" ? "#/e/empresa" : "#/c/perfil", inner);
         }
+        function eliminarCuentaScreen(kind) {
+          const e = kind === "e";
+          const lista = e
+            ? "<li>El perfil de tu empresa, tu logo y tus datos.</li><li>Tus búsquedas, las postulaciones que recibiste y tus respuestas.</li><li>Tus chats con postulantes.</li>"
+            : "<li>Tu perfil, tu foto y tu CV.</li><li>Tus postulaciones y las respuestas que recibiste.</li><li>Tus chats con empresas.</li>";
+          const inner = `<div style="max-width:560px">${hdr(backBtn(`#/${kind}/config`))}${profHead(kind)}<h2 style="font-size:20px;font-weight:500;margin-bottom:10px">Eliminar tu cuenta</h2>
+  <p style="line-height:1.6;margin-bottom:10px">Se borra de forma definitiva y no se puede deshacer:</p><ul style="line-height:1.7;margin:0 0 18px 18px">${lista}</ul>
+  <p class="t-note" style="margin-bottom:24px">Si hiciste una denuncia, se conserva sin tus datos para que el equipo pueda revisarla.</p>
+  <button class="btn out" data-action="eliminar-cuenta" style="color:#b42318">Eliminar mi cuenta para siempre</button></div>`;
+          return shell(kind, e ? "#/e/empresa" : "#/c/perfil", inner);
+        }
+        async function eliminarCuenta(btn) {
+          if (!window.confirm("¿Seguro? Tu cuenta y todos tus datos se van a borrar para siempre.")) return;
+          btn.disabled = true;
+          const uid = ME.id;
+          // No eliminar la cuenta si Storage no confirmó la eliminación de sus archivos.
+          const archivos = await Promise.allSettled([
+            sb.storage.from("cvs").remove([`${uid}/cv.pdf`]),
+            sb.storage.from("avatars").remove([`${uid}/avatar`]),
+          ]);
+          const errorArchivos = archivos.find((r) => r.status === "rejected" || r.value?.error);
+          if (errorArchivos) {
+            console.error("[storage] No se pudieron eliminar todos los archivos de la cuenta", errorArchivos);
+            toast("No pudimos eliminar tus archivos. Tu cuenta sigue activa; probá de nuevo.");
+            if (btn.isConnected) btn.disabled = false;
+            return;
+          }
+          const ok = await DB.eliminarCuenta();
+          if (!ok) {
+            toast("No pudimos eliminar tu cuenta. Escribinos a matchempleos@gmail.com.");
+            if (btn.isConnected) btn.disabled = false;
+            return;
+          }
+          try {
+            ["me-descartadas", "me-notif-leidas", "me-match-visto", "me-chat-read"].forEach((k) => localStorage.removeItem(k + ":" + uid));
+          } catch {}
+          await sb.auth.signOut({ scope: "local" }).catch(() => null);
+          ME = { id: null, rol: null, nombre: null, email: null, datos: {}, avatarUrl: null };
+          S = freshState();
+          toast("Eliminamos tu cuenta y tus datos.");
+          go("#/");
+        }
         function legalApp(kind, doc) {
           const d = LEGAL[doc];
           if (!d) return configScreen(kind);
@@ -4596,15 +4705,15 @@
         }
         function ePanel() {
           const p = S.e.pend.length;
-          const vieja = S.e.pend[0];
+          const vieja = S.e.pend.reduce((a, x) => (x.hace > a.hace ? x : a), S.e.pend[0]);
           const pendCard = p
-            ? `<a class="card" data-bsel="all" href="#/e/candidatos" style="display:block;text-decoration:none"><h2 style="font-size:20px;font-weight:500;line-height:1.3;margin-bottom:10px">Te faltan responder ${p} postulaci${p === 1 ? "ón" : "ones"}</h2><p class="t-note">La más vieja lleva ${vieja.hace} días esperando. Te quedan ${vieja.quedan} para contestarla sin que baje tu tasa.</p></a>`
+            ? `<a class="card" data-bsel="all" href="#/e/candidatos" style="display:block;text-decoration:none"><h2 style="font-size:20px;font-weight:500;line-height:1.3;margin-bottom:10px">Te faltan responder ${p} postulaci${p === 1 ? "ón" : "ones"}</h2><p class="t-note">La más vieja lleva ${vieja.hace} día${vieja.hace === 1 ? "" : "s"} esperando. ${vieja.quedan < 0 ? "Ya se venció el plazo: tu tasa bajó, pero todavía podés contestarla." : vieja.quedan === 0 ? "Hoy vence el plazo para contestarla sin que baje tu tasa." : `Te quedan ${vieja.quedan} día${vieja.quedan === 1 ? "" : "s"} para contestarla sin que baje tu tasa.`}</p></a>`
             : `<div class="card"><h2 style="font-size:20px;font-weight:500;margin-bottom:8px">Estás al día</h2><p class="t-note">Respondiste todas las postulaciones. Ya podés publicar una búsqueda nueva.</p></div>`;
           const busquedasEmpresa = S.e.busquedas;
           const inner = `<div class="hdr">${WM_INV}<span class="side">${esc(miNombre("e"))}</span></div>
   <h1 class="t-title only-d" style="margin-bottom:20px">Búsquedas</h1>
   <div class="grid2" style="gap:12px">${pendCard}
-  <div><div class="row2"><div class="card"><p class="bignum">${S.e.tasa}%</p><p class="t-note" style="margin-top:6px">tu tasa de respuesta</p></div><div class="card"><p class="bignum">${S.e.demora} días</p><p class="t-note" style="margin-top:6px">tu demora promedio</p></div></div>
+  <div><div class="row2"><div class="card"><p class="bignum">${S.e.tasa == null ? "—" : S.e.tasa + "%"}</p><p class="t-note" style="margin-top:6px">${S.e.tasa == null ? "todavía sin historial" : "contestadas a tiempo"}</p></div><div class="card"><p class="bignum">${S.e.demora == null ? "—" : diasTxt(S.e.demora)}</p><p class="t-note" style="margin-top:6px">tu demora promedio</p></div></div>
   <p style="font-size:13px;margin-top:10px">Este número lo ven los candidatos antes de postularse.</p></div></div>
   <h2 class="t-sec">Tus búsquedas</h2>
   <div class="stack grid2">${busquedasEmpresa
@@ -4629,7 +4738,7 @@
             return shell("e", "#/e/panel", inner);
           }
           const opts = [
-            [3, "Recomendado. Tu aviso aparece primero en el feed."],
+            [3, "Recomendado. Tu aviso aparece antes en el feed."],
             [5, "Plazo estándar."],
             [7, "Máximo permitido."],
           ];
@@ -4784,7 +4893,7 @@ async function toggleBusqueda(id) {
                 .map(
                   (
                     c,
-                  ) => `<div class="ccard"><a href="#/e/candidato/${c.id}">${c.avatar ? `<img loading="lazy" decoding="async" class="avatar" src="${c.avatar}" alt="" style="width:40px;height:40px;border-radius:10px;background:#fff">` : avPh("width:40px;height:40px;border-radius:10px")}<div class="grow" style="flex:1;min-width:0"><h3>${esc(c.corto)}, ${c.edad}</h3><p class="t-note" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.linea)}</p><p class="t-note" style="font-weight:600;color:var(--green)">${c.matchScore == null ? "Coincidencia no disponible" : c.matchScore + "% de coincidencia estimada"}</p></div><span class="vence">Vence en ${c.quedan} días</span></a>
+                  ) => `<div class="ccard"><a href="#/e/candidato/${c.id}">${c.avatar ? `<img loading="lazy" decoding="async" class="avatar" src="${c.avatar}" alt="" style="width:40px;height:40px;border-radius:10px;background:#fff">` : avPh("width:40px;height:40px;border-radius:10px")}<div class="grow" style="flex:1;min-width:0"><h3>${esc(c.corto)}, ${c.edad}</h3><p class="t-note" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.linea)}</p><p class="t-note" style="font-weight:600;color:var(--green)">${c.matchScore == null ? "Coincidencia no disponible" : c.matchScore + "% de coincidencia estimada"}</p></div><span class="vence">${venceTxt(c.quedan)}</span></a>
       <div class="row2"><button class="btn cno" data-go="#/e/responder/${c.id}/no">No avanza</button><button class="btn cyes" data-go="#/e/responder/${c.id}/si">Me interesa</button></div></div>`,
                 )
                 .join("") ||
@@ -4814,7 +4923,8 @@ async function toggleBusqueda(id) {
   <h2 class="t-sec">Lo que sabe hacer</h2><div class="chips">${(t.sabe || []).map((s) => `<span class="chip fill">${esc(s)}</span>`).join("")}</div>
   <h2 class="t-sec">Estudios</h2><p style="line-height:1.6">${esc(t.estudios || "")}</p>
   ${cvBtn(t.cv)}
-  ${tiene ? `<div class="stack" style="margin-top:22px"><button class="btn pri" data-go="#/e/chat/${t.id}">Escribirle</button></div>` : ""}</div>`;
+  ${tiene ? `<div class="stack" style="margin-top:22px"><button class="btn pri" data-go="#/e/chat/${t.id}">Escribirle</button></div>` : ""}
+  ${t.respuesta === "mas" ? `<p class="t-note" style="margin-top:18px">Le pediste más información. Cuando decidas, contestale:</p><div class="row2" style="margin-top:10px"><button class="btn out" data-go="#/e/responder/${t.id}/no">No avanza</button><button class="btn pri" data-go="#/e/responder/${t.id}/si">Me interesa</button></div>` : ""}</div>`;
           return shell("e", "#/e/candidatos", inner);
         }
         function eCandidato(id) {
@@ -4826,7 +4936,7 @@ async function toggleBusqueda(id) {
           const idx = S.e.pend.indexOf(c) + 1;
           const inner = `<div style="max-width:720px">${hdr(backBtn("#/e/candidatos"), `${idx} de ${S.e.pend.length} sin responder`)}
   <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px">${c.avatar ? `<img loading="lazy" decoding="async" class="avatar" src="${c.avatar}" alt="" style="background:#fff">` : '<span class="avatar ph"></span>'}<div><h1 style="font-size:20px;font-weight:600">${esc(c.nombre)}, ${c.edad}</h1><p style="font-size:13px">${esc(c.zona)} · ${esc(c.busca)}</p></div></div>
-  <div class="card" style="font-size:13px">Se postuló hace ${c.hace} días. Te quedan ${c.quedan} para contestarle.</div>
+  <div class="card" style="font-size:13px">Se postuló ${fechaRel(c.creada)}. ${c.quedan < 0 ? `Se venció tu plazo de ${c.plazo} días: tu tasa bajó, pero todavía podés contestarle.` : c.quedan === 0 ? "Hoy vence tu plazo para contestarle." : `Te quedan ${c.quedan} día${c.quedan === 1 ? "" : "s"} para contestarle.`}</div>
   <h2 class="t-sec">Por qué se postuló</h2><p style="line-height:1.6">${esc(c.porque)}</p>
   <h2 class="t-sec">Lo que sabe hacer</h2><div class="chips">${c.sabe.map((s) => `<span class="chip fill">${esc(s)}</span>`).join("")}</div>
   <h2 class="t-sec">Estudios</h2><p style="line-height:1.6">${esc(c.estudios)}</p>
@@ -4839,7 +4949,7 @@ async function toggleBusqueda(id) {
             "Lo quiero conocer",
             "Se abre el chat y coordinan una entrevista.",
             "si",
-            "Hola {n}, somos {empresa}. Nos interesó tu perfil para el puesto de {puesto}. ¿Podés venir el jueves a las 16?",
+            "Hola {n}, somos {empresa}. Nos interesó tu perfil para el puesto de {puesto}. ¿Podés venir a una entrevista el [día] a las [hora]?",
           ],
           [
             "Por ahora no",
@@ -4856,17 +4966,19 @@ async function toggleBusqueda(id) {
         ];
         let tplSel = null;
         function eResponder(id, tipo) {
-          const c = S.e.pend.find((x) => x.id === id);
+          // Sin responder, o con una consulta abierta ("Quiero saber un poco más") que ahora se decide
+          const c = S.e.pend.find((x) => x.id === id) || (S.e.todos || []).find((x) => x.id === id && x.respuesta === "mas");
           if (!c) return eCandidatos();
+          const puestoResp = S.e.busquedas.find((b) => b.id === c.oferta_id)?.puesto || ePuestoActual();
           const sel = tplSel === null ? (tipo === "no" ? 1 : 0) : tplSel;
           const first = c.nombre.split(" ")[0];
           const fill = (s) =>
             s
               .replace("{n}", first)
-              .replaceAll("{puesto}", ePuestoActual())
+              .replaceAll("{puesto}", puestoResp)
               .replaceAll("{empresa}", miNombre("e"));
-          const inner = `<div style="max-width:620px">${hdr(backBtn("#/e/candidato/" + id, "Cancelar"), `${esc(c.corto)} · ${esc(ePuestoActual())}`)}
-  <h1 class="t-title" style="margin-bottom:10px">Contestale a ${esc(first)}</h1><p style="margin-bottom:18px;line-height:1.5">Elegí una respuesta. Podés editarla antes de enviarla.</p>
+          const inner = `<div style="max-width:620px">${hdr(backBtn("#/e/candidato/" + id, "Cancelar"), `${esc(c.corto)} · ${esc(puestoResp)}`)}
+  <h1 class="t-title" style="margin-bottom:10px">Contestale a ${esc(first)}</h1><p style="margin-bottom:18px;line-height:1.5">Elegí una respuesta. Podés editarla antes de enviarla; lo que está entre corchetes lo tenés que completar vos.</p>
   <div class="stack">${TPL.map(([t, d], i) => `<button class="tpl" data-tpl="${i}" aria-pressed="${i === sel}"><b>${t}</b><span>${d}</span></button>`).join("")}</div>
   <label class="vh" for="resp-txt">Vista previa del mensaje</label><textarea class="prev" id="resp-txt" style="margin-top:12px">«${esc(fill(TPL[sel][3]))}»</textarea>
   <button class="btn out" style="margin-top:12px" data-action="enviar-resp" data-id="${id}" data-tipo="${TPL[sel][2]}">Enviar respuesta</button>
@@ -4879,9 +4991,9 @@ async function toggleBusqueda(id) {
             .replace(/^./, (c) => c.toUpperCase());
           const inner = `<div style="max-width:720px"><h1 class="t-title" style="margin-bottom:16px;font-size:20px">Mi empresa</h1>
   <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px"><img loading="lazy" decoding="async" class="avatar" src="${fotoSrc()}" alt="" style="background:#fff" data-action="foto" title="Cambiar logo"><div><h2 style="font-size:20px;font-weight:500">${esc(miNombre("e"))}</h2><p style="font-size:13px">${subtituloEmpresa() || '<span style="color:var(--t3)">Completá los datos de tu empresa</span>'}</p></div></div>
-  <div class="card"><div class="row2"><div><p class="bignum">${S.e.tasa}%</p><p class="t-note">de respuesta</p></div><div><p class="bignum">${S.e.demora} días</p><p class="t-note">de demora</p></div></div><div class="progress" style="margin:14px 0"><i style="width:${S.e.tasa}%"></i></div><p class="t-note">Con 90% o más entrás en el grupo de empresas destacadas y tus búsquedas aparecen primero.</p></div>
+  <div class="card"><div class="row2"><div><p class="bignum">${S.e.tasa == null ? "—" : S.e.tasa + "%"}</p><p class="t-note">${S.e.tasa == null ? "sin historial todavía" : "contestadas a tiempo"}</p></div><div><p class="bignum">${S.e.demora == null ? "—" : diasTxt(S.e.demora)}</p><p class="t-note">de demora</p></div></div><div class="progress" style="margin:14px 0"><i style="width:${S.e.tasa || 0}%"></i></div><p class="t-note">Con 90% o más entrás en el grupo de empresas destacadas y tus búsquedas aparecen primero.</p></div>
   <h2 class="t-sec">Historial de respuesta</h2>
-  ${[[mesActual, S.e.tasa]].map(([m, v]) => `<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>${m}</span><span>${v}%</span></div><div class="progress"><i style="width:${v}%;background:var(--navy)"></i></div></div>`).join("")}
+  ${(S.e.tasa == null ? [] : [[mesActual, S.e.tasa]]).map(([m, v]) => `<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>${m}</span><span>${v}%</span></div><div class="progress"><i style="width:${v}%;background:var(--navy)"></i></div></div>`).join("")}
   <button class="rowline" data-go="#/e/datos"><span>Datos empresariales</span><span class="v">›</span></button>
   <button class="rowline" data-go="#/e/config"><span>Configuración</span><span class="v">›</span></button></div>`;
           return shell("e", "#/e/empresa", inner);
@@ -4981,6 +5093,7 @@ async function toggleBusqueda(id) {
               card.style.transform = "translate3d(-420px, 20px, 0) rotate(-16deg)";
               card.style.opacity = "0";
               setTimeout(() => {
+                descartarOferta(oid);
                 S.c.idx++;
                 render(true);
               }, 180);
@@ -4992,6 +5105,13 @@ async function toggleBusqueda(id) {
           };
           card.addEventListener("pointerup", endDrag);
           card.addEventListener("pointercancel", endDrag);
+        }
+
+        function descartarOferta(oid) {
+          if (!oid) return;
+          const set = leerSet("me-descartadas");
+          set.add(oid);
+          guardarSet("me-descartadas", set);
         }
 
         async function apply(oid) {
@@ -5032,51 +5152,35 @@ async function toggleBusqueda(id) {
           render(true);
         }
 
+        let enviandoResp = false;
         async function enviarResp(id, tipo, text) {
-          const i = S.e.pend.findIndex((x) => x.id === id);
-          if (i < 0) return;
-          const c = S.e.pend.splice(i, 1)[0];
-          const guardadoCand = DB.guardarCandidato(c.id, c.corto, tipo);
-          const rec = { nombre: c.corto, tipo, oid: c.oferta_id };
-          S.e.resp.unshift(rec);
-          S.e.tasa = calcTasa();
-          DB.setTasa(S.e.tasa);
-          const abreChat = tipo === "si";
-          if (abreChat) {
-            rec.chat = c.id;
-            const key = "chat:" + c.id;
-            const bienvenida = text.replace(/^«|»$/g, "");
-            S.e.chats[c.id] = {
-              con: c.corto,
-              puesto: S.e.busquedas.find((b) => b.id === c.oferta_id)?.puesto || ePuestoActual(),
-              key,
-              match: tipo === "si",
-              avatar: c.avatar || "",
-              perfilUrl: "#/e/candidato/" + c.id,
-              msgs: [{ de: "me", t: bienvenida, h: now() }],
-            };
-            await guardadoCand;
-            DB.nuevoMensaje(key, "me", bienvenida, now());
-          } else await guardadoCand;
-          if (tipo === "si" || tipo === "mas") {
-            const postRow = await DB.cargarPostulacion(c.id);
-            if (postRow) {
-              postRow.estado = "Respondida";
-              postRow.datos = {
-                ...(postRow.datos || {}),
-                post: { ...(postRow.datos?.post || {}), estado: "Respondida" },
-              };
-              await DB.actualizarPostulacion(postRow);
-            }
+          if (enviandoResp) return;
+          const texto = text.replace(/^«|»$/g, "").trim();
+          if (/\[[^\]]+\]/.test(texto)) {
+            toast("Completá lo que está entre corchetes antes de enviar.");
+            document.getElementById("resp-txt")?.focus();
+            return;
           }
-          if (tipo === "si")
-            S.e.notifs.unshift({
-              t: `Hay match con ${c.corto}`,
-              cuando: "ahora",
-              d: "Se abrió el chat para coordinar los próximos pasos.",
-              go: "#/e/chat/" + c.id,
-              nuevo: true,
-            });
+          enviandoResp = true;
+          const btn = document.querySelector('[data-action="enviar-resp"]');
+          if (btn) btn.disabled = true;
+          // Guarda la respuesta en la postulación (le llega al postulante aunque sea un no) y abre el chat si corresponde
+          const ok = await DB.responder(id, tipo, texto);
+          enviandoResp = false;
+          if (!ok) {
+            if (btn && btn.isConnected) btn.disabled = false;
+            return;
+          }
+          tplSel = null;
+          await hidratar();
+          toast(
+            tipo === "si"
+              ? "Respuesta enviada. Hay match y se abrió el chat."
+              : tipo === "mas"
+                ? "Le mandaste tus preguntas. Se abrió el chat."
+                : "Respuesta enviada. Le llega en su postulación.",
+          );
+          go(tipo === "no" ? "#/e/candidatos" : "#/e/chat/" + id);
         }
         /* ---------- Router ---------- */
         function route() {
@@ -5107,6 +5211,8 @@ async function toggleBusqueda(id) {
           if (a === "recuperar") return recuperar();
           if (a === "registro") {
             if (!b) return registro();
+            // Los pasos siguientes necesitan el correo y la contraseña de la primera pantalla
+            if (!(regDraft["rg-mail"] && regDraft["rg-pass"])) return registro();
             if (b === "c") return regCand(c || "1");
             if (b === "e") return regEmp(c || "1");
             if (b === "terminos") return regTerminos(c);
@@ -5136,6 +5242,8 @@ async function toggleBusqueda(id) {
                 return cDatos();
               case "salir":
                 return salir("c");
+              case "eliminar":
+                return eliminarCuentaScreen("c");
               case "legal":
                 return legalApp("c", c);
             }
@@ -5151,6 +5259,7 @@ async function toggleBusqueda(id) {
               case "busqueda":
                 return eBusqueda(c);
               case "candidato":
+                marcarVistaSiHaceFalta(c);
                 return eCandidato(c);
               case "responder":
                 return eResponder(c, d || "si");
@@ -5169,11 +5278,22 @@ async function toggleBusqueda(id) {
                 return eDatos();
               case "salir":
                 return salir("e");
+              case "eliminar":
+                return eliminarCuentaScreen("e");
               case "legal":
                 return legalApp("e", c);
             }
           }
           return home();
+        }
+        // La primera vez que la empresa abre una postulación, el postulante ve "Te vieron"
+        const vistasMarcadas = new Set();
+        function marcarVistaSiHaceFalta(id) {
+          const c = S.e.pend.find((x) => x.id === id);
+          if (!c || c.estado !== "Enviada" || vistasMarcadas.has(id)) return;
+          vistasMarcadas.add(id);
+          c.estado = "Vista";
+          DB.marcarVista(id);
         }
         let lastHash = "";
         function titleFor(hash) {
@@ -5283,13 +5403,24 @@ async function toggleBusqueda(id) {
           if (t.dataset.notif) {
             const [k, i] = t.dataset.notif.split(":");
             const n = (k === "e" ? S.e.notifs : S.c.notifs)[+i];
-            if (n) n.nuevo = false;
+            if (n) {
+              n.nuevo = false;
+              marcarNotifsLeidas([n.key]);
+            }
             return;
           }
           if (t.dataset.go) {
             e.preventDefault();
             if ((t.dataset.cred === "rc" || t.dataset.cred === "re") && !validarCred(t.dataset.cred, true))
               return;
+            if (t.dataset.req) {
+              const falta = t.dataset.req.split(",").find((id) => !String(regDraft[id] || document.getElementById(id)?.value || "").trim());
+              if (falta) {
+                toast(t.dataset.reqMsg || "Completá los campos para continuar.");
+                document.getElementById(falta)?.focus();
+                return;
+              }
+            }
             if (t.dataset.welcome) {
               toast(
                 t.dataset.welcome === "e"
@@ -5397,13 +5528,15 @@ async function toggleBusqueda(id) {
             return;
           }
           if (act === "descartar") {
+            descartarOferta(S.c.ofertas[S.c.idx]?.id);
             S.c.idx++;
             render(true);
             return;
           }
           if (act === "feed-reset") {
+            guardarSet("me-descartadas", new Set());
             S.c.idx = 0;
-            render();
+            hidratar();
             return;
           }
           if (act === "toast") {
@@ -5411,7 +5544,9 @@ async function toggleBusqueda(id) {
             return;
           }
           if (act === "leidas") {
-            (t.dataset.kind === "e" ? S.e.notifs : S.c.notifs).forEach((n) => (n.nuevo = false));
+            const lista = t.dataset.kind === "e" ? S.e.notifs : S.c.notifs;
+            lista.forEach((n) => (n.nuevo = false));
+            marcarNotifsLeidas(lista.map((n) => n.key));
             render(true);
             return;
           }
@@ -5467,6 +5602,10 @@ async function toggleBusqueda(id) {
             verCV(t.dataset.cv);
             return;
           }
+          if (act === "eliminar-cuenta") {
+            eliminarCuenta(t);
+            return;
+          }
           if (act === "logout") {
             ME = { id: null, rol: null, nombre: null, email: null, datos: {}, avatarUrl: null };
             S = freshState(); sb.auth.signOut(); go("#/login"); return;
@@ -5482,30 +5621,8 @@ async function toggleBusqueda(id) {
             return;
           }
           if (act === "publicar") {
-            if (S.e.pend.length) return;
-            const nombre = pubDraft.puesto.trim() || "Nueva búsqueda";
-            const nb = {
-              id: "b" + Date.now(),
-              puesto: nombre,
-              total: 0,
-              estado: "Activa",
-              desc: pubDraft.desc,
-              jornada: [...(S.reg.chips.pjor || [])],
-              turno: [...(S.reg.chips.ptur || [])],
-            };
-            S.e.busquedas.unshift(nb);
-            DB.guardarBusqueda(nb);
-            S.e.notifs.unshift({
-              t: "Publicaste una búsqueda",
-              d: `${nombre} · te comprometiste a responder en ${S.e.plazo} días.`,
-              go: "#/e/panel",
-              nuevo: true,
-            });
-            pubDraft = { puesto: "", rubro: [], modo: [], desc: "" };
-            S.reg.chips.pjor = [];
-            S.reg.chips.ptur = [];
-            toast(`Publicaste “${nombre}”. Respondé en ${S.e.plazo} días.`);
-            go("#/e/panel");
+            if (S.e.pend.length || t.disabled) return;
+            publicarBusqueda(t);
             return;
           }
           if (act === "crear-cuenta") {
@@ -5636,6 +5753,32 @@ async function toggleBusqueda(id) {
           }
         }
 
+        async function publicarBusqueda(btn) {
+          const nombre = pubDraft.puesto.trim() || "Nueva búsqueda";
+          const nb = {
+            id: "b" + crypto.randomUUID(),
+            puesto: nombre,
+            total: 0,
+            estado: "Activa",
+            desc: pubDraft.desc,
+            jornada: [...(S.reg.chips.pjor || [])],
+            turno: [...(S.reg.chips.ptur || [])],
+            plazo: S.e.plazo,
+          };
+          btn.disabled = true;
+          const ok = await DB.guardarBusqueda(nb);
+          if (!ok) {
+            if (btn.isConnected) btn.disabled = false;
+            return;
+          }
+          pubDraft = { puesto: "", rubro: [], modo: [], desc: "" };
+          S.reg.chips.pjor = [];
+          S.reg.chips.ptur = [];
+          await hidratar();
+          toast(`Publicaste “${nombre}”. Te comprometiste a responder en ${nb.plazo} días.`);
+          go("#/e/panel");
+        }
+
         function savePub() {
           const a = document.getElementById("pb-puesto"),
             b = document.getElementById("pb-desc");
@@ -5716,16 +5859,10 @@ async function toggleBusqueda(id) {
           }
         });
 
-        // Tasa de respuesta = postulaciones respondidas / total de postulaciones recibidas.
-        function calcTasa() {
-          const r = S.e.resp.length,
-            p = S.e.pend.length;
-          return r + p ? Math.round((100 * r) / (r + p)) : 100;
-        }
         function msgsDeChat(d, chatId) {
           return (d.mensajes || [])
             .filter((m) => m.chat_id === chatId)
-            .map((m) => ({ dbId: m.id, de: m.autor_id === ME.id ? "me" : "them", t: m.texto, h: m.h }));
+            .map((m) => ({ dbId: m.id, de: m.autor_id === ME.id ? "me" : "them", t: m.texto, h: m.h, f: m.created_at }));
         }
         function msgsDe(d, key) {
           return d.mensajes
@@ -5804,20 +5941,53 @@ async function toggleBusqueda(id) {
           if (!d) return;
           const perf = d.perfiles[0];
           if (ME.rol === "c" && d.cupo != null) S.c.cupo = d.cupo;
+          // Tasa y demora vienen del servidor: la empresa ve el mismo número que los postulantes
+          const repPorEmpresa = new Map((d.reputacion || []).map((r) => [r.empresa_id, r]));
           if (perf && ME.rol === "e") {
-            S.e.tasa = perf.tasa ?? 0;
-            S.e.demora = perf.demora ?? 0;
+            const rep = repPorEmpresa.get(ME.id) || {};
+            S.e.tasa = rep.tasa ?? null;
+            S.e.demora = rep.demora == null ? null : Number(rep.demora);
             S.e.plazo = perf.plazo ?? 3;
           }
-          // Candidato: postulaciones y chats creados
+          // Candidato: postulaciones, respuestas y chats
+          const busquedaPorId = new Map((d.busquedas || []).map((b) => [b.id, b]));
           const empresaPorOferta = new Map((d.busquedas || []).map((b) => [b.id, b.empresa_id]));
           const empresaPorPost = new Map((d.chats || []).map((ch) => [ch.postulacion_id, ch.empresa_id]));
-          const dbPosts = d.postulaciones.map((r) => ({
-            ...r.datos.post,
-            estado: r.estado,
-            id: r.id,
-            empresaId: empresaPorOferta.get(r.oferta_id) || empresaPorPost.get(r.id) || null,
-          }));
+          const chatPorPost = new Map((d.chats || []).map((ch) => [ch.postulacion_id, ch]));
+          const dbPosts = d.postulaciones.map((r) => {
+            const post = r.datos?.post || {};
+            const plazo = busquedaPorId.get(r.oferta_id)?.plazo || 3;
+            const quedan = diasRestantes(r.created_at, plazo);
+            const resp = r.datos?.respuesta || null;
+            const ch = chatPorPost.get(r.id);
+            let pie;
+            if (r.estado === "Respondida")
+              pie = resp?.texto
+                ? "«" + resp.texto + "»"
+                : resp?.tipo === "no"
+                  ? "La empresa respondió que por ahora no avanza."
+                  : "La empresa respondió tu postulación.";
+            else if (quedan < 0) pie = `La empresa no respondió en el plazo de ${plazo} días. Su tasa de respuesta bajó.`;
+            else if (r.estado === "Vista")
+              pie = `Te vieron. La empresa tiene ${quedan === 0 ? "hasta hoy" : quedan + " día" + (quedan === 1 ? "" : "s")} para responderte.`;
+            else pie = `Enviada ${fechaRel(r.created_at)}. La empresa tiene ${plazo} días para responderte.`;
+            return {
+              ...post,
+              estado: r.estado,
+              id: r.id,
+              oid: r.oferta_id || post.oid,
+              empresaId: empresaPorOferta.get(r.oferta_id) || empresaPorPost.get(r.id) || null,
+              respuesta: resp,
+              pie,
+              plazo,
+              vencida: r.estado !== "Respondida" && quedan < 0,
+              creada: r.created_at,
+              vistaAt: r.vista_at || null,
+              respondidaAt: r.respondida_at || null,
+              chat: ch ? ch.id : undefined,
+              match: ch ? ch.match !== false : false,
+            };
+          });
           S.c.posts = dbPosts;
           S.c.chats = {};
           if (ME.rol === "c")
@@ -5831,17 +6001,14 @@ async function toggleBusqueda(id) {
                 postId: ch.postulacion_id,
                 empresaId: ch.empresa_id,
                 verificada: (d.verificadas || []).includes(ch.empresa_id),
-                match: true,
+                match: ch.match !== false,
                 key: "chat:" + ch.id,
                 avatar: ep.avatar_url || "",
                 perfilUrl: "#/c/oferta/" + (r?.oferta_id || ""),
                 msgs: msgsDeChat(d, ch.id),
               };
-              if (post) post.chat = ch.id;
             });
-          S.c.notifs = [];
-          // Empresa: búsquedas y candidatos respondidos
-          if (ME.rol === "e") S.e.notifs = [];
+          // Empresa: búsquedas y candidatos
           const dbBus = d.busquedas.map((b) => ({
             id: b.id,
             puesto: b.puesto,
@@ -5850,6 +6017,7 @@ async function toggleBusqueda(id) {
             desc: b.descripcion,
             jornada: b.jornada || [],
             turno: b.turno || [],
+            plazo: b.plazo || 3,
           }));
           S.e.busquedas = dbBus;
           const estados = new Map(d.candidatosEstado.map((r) => [r.id, r]));
@@ -5859,10 +6027,8 @@ async function toggleBusqueda(id) {
             const datos = perfil?.datos?.campos || {};
             const chips = perfil?.datos?.chips || {};
             const nombre = perfil?.nombre || "Postulante";
-            const dias = Math.max(
-              0,
-              Math.floor((Date.now() - new Date(r.created_at || Date.now()).getTime()) / 86400000),
-            );
+            const dias = Math.max(0, Math.floor((Date.now() - new Date(r.created_at || Date.now()).getTime()) / DIA_MS));
+            const plazo = busquedaPorId.get(r.oferta_id)?.plazo || 3;
             return {
               id: r.id,
               candidato_id: r.candidato_id,
@@ -5874,36 +6040,37 @@ async function toggleBusqueda(id) {
               linea: [datos["rc-puesto"], datos["rc-ubi"]].filter(Boolean).join(" · ") || "Postulante",
               busca: datos["rc-puesto"] || "Busca trabajo",
               hace: dias,
-              quedan: Math.max(0, S.e.plazo - dias),
+              plazo,
+              quedan: diasRestantes(r.created_at, plazo),
+              creada: r.created_at,
               avatar: perfil?.avatar_url || "",
               cv: perfil?.datos?.cv?.path || "",
               porque: datos["rc-sobre"] || "Se postuló a esta búsqueda según su perfil.",
-              sabe: [...(chips.rubros || []), ...(datos["rx-puesto"] ? [datos["rx-puesto"]] : [])].slice(
-                0,
-                4,
-              ),
+              sabe: [...(chips.rubros || []), ...(datos["rx-puesto"] ? [datos["rx-puesto"]] : [])].slice(0, 4),
               estudios: datos["rc-estudios"] || "Perfil en Match Empleos",
               chips,
               campos: datos,
               estado: r.estado,
+              respuesta: estados.get(r.id)?.estado || null,
             };
           });
           S.e.todos = postulantes;
           S.e.pend = postulantes.filter((p) => !estados.has(p.id) && p.estado !== "Respondida");
           S.e.resp = [];
           S.e.chats = {};
+          const chatEmpresa = new Map(ME.rol === "e" ? (d.chats || []).map((ch) => [ch.id, ch]) : []);
           d.candidatosEstado.forEach((r) => {
             const p = postulantes.find((x) => x.id === r.id);
+            const ch = chatEmpresa.get(r.id);
             const nombre = p?.corto || r.corto;
-            const hasChat = r.estado === "si";
-            S.e.resp.unshift({ nombre, avatar: p?.avatar || "", tipo: r.estado, chat: hasChat ? r.id : undefined, oid: p?.oferta_id });
-            if (hasChat)
+            S.e.resp.unshift({ nombre, avatar: p?.avatar || "", tipo: r.estado, chat: ch ? r.id : undefined, oid: p?.oferta_id });
+            if (ch)
               S.e.chats[r.id] = {
                 con: nombre,
                 puesto: S.e.busquedas.find((b) => b.id === p?.oferta_id)?.puesto || ePuestoActual(),
-                match: true,
+                match: ch.match !== false,
                 key: "chat:" + r.id,
-                avatar: p?.avatar || "",
+                avatar: p?.avatar || ch.candidato?.avatar_url || "",
                 perfilUrl: "#/e/candidato/" + r.id,
                 msgs: msgsDeChat(d, r.id),
               };
@@ -5911,10 +6078,14 @@ async function toggleBusqueda(id) {
           const empresaMap = new Map((d.empresas || []).map((p) => [p.id, p]));
           const feedActualId = S.c.ofertas[S.c.idx]?.id;
           const idsPostulados = new Set((d.postulaciones || []).map((p) => p.oferta_id));
-          const ofertasReales = d.busquedas.filter((b) => !idsPostulados.has(b.id)).map((b) => {
+          const descartadas = ME.rol === "c" ? leerSet("me-descartadas") : new Set();
+          const norm = (x) => String(x || "").trim().toLocaleLowerCase("es");
+          const misRubros = new Set(((ME.datos?.chips || {}).rubros || []).map(norm));
+          const ofertasReales = d.busquedas.filter((b) => !idsPostulados.has(b.id) && !descartadas.has(b.id)).map((b) => {
             const ep = empresaMap.get(b.empresa_id);
             const ec = ep?.datos?.campos || {};
             const ecx = ep?.datos?.chips || {};
+            const rep = repPorEmpresa.get(b.empresa_id) || {};
             return {
               id: b.id,
               emp: ep?.nombre || "Empresa",
@@ -5923,18 +6094,30 @@ async function toggleBusqueda(id) {
               puesto: b.puesto,
               chips: [ec["re-ubi"], ecx.etipo, ecx.emodo, ecx.ehora].flat().filter(Boolean),
               fchips: [ec["re-ubi"], ecx.etipo, ecx.emodo].flat().filter(Boolean),
-              tasa: ep?.tasa ?? 0,
-              dias: ep?.demora ?? 0,
+              tasa: rep.tasa ?? null,
+              dias: rep.demora == null ? null : Number(rep.demora),
+              plazo: b.plazo || 3,
+              afinidad: (ecx.esector || []).filter((x) => misRubros.has(norm(x))).length,
+              creada: b.created_at || "",
               logo: ep?.avatar_url || "",
               desc: b.descripcion || ec["re-desc"] || "",
               real: true,
             };
           });
+          // Orden del feed: primero las empresas que contestan a tiempo (90% o más),
+          // después los plazos de respuesta más cortos, los rubros del postulante y lo más nuevo
+          ofertasReales.sort(
+            (a, b) =>
+              (b.tasa >= 90 ? 1 : 0) - (a.tasa >= 90 ? 1 : 0) ||
+              a.plazo - b.plazo ||
+              b.afinidad - a.afinidad ||
+              new Date(b.creada || 0) - new Date(a.creada || 0),
+          );
           if (ME.rol === "c") {
             S.c.ofertas = ofertasReales;
             const mismoIndice = S.c.ofertas.findIndex((o) => o.id === feedActualId);
-            if (mismoIndice >= 0) S.c.idx = mismoIndice;
-            else S.c.idx = Math.min(S.c.idx, Math.max(0, S.c.ofertas.length - 1));
+            // Las descartadas y las ya postuladas salen de la lista, así que lo que queda está sin ver
+            S.c.idx = mismoIndice >= 0 ? mismoIndice : 0;
           } else {
             S.c.ofertas = [];
             S.c.idx = 0;
@@ -5946,12 +6129,80 @@ async function toggleBusqueda(id) {
             S.e.chats[k].msgs = [...(S.e.chats[k].msgs || []), ...msgsDe(d, "e:" + k)];
           });
           calculateUnread(d);
-          if (ME.rol === "e") {
-            S.e.tasa = calcTasa();
-            if (perf && perf.tasa !== S.e.tasa) DB.setTasa(S.e.tasa);
-          }
+          if (ME.rol === "e") S.e.notifs = construirNotifs();
+          else S.c.notifs = construirNotifs();
           render(true);
           suscribirMensajesRealtime();
+          revisarMatchNuevo();
+        }
+
+        // Notificaciones armadas con los datos reales: no se pierden al recargar
+        function construirNotifs() {
+          const leidas = leerSet("me-notif-leidas");
+          const lista = [];
+          const add = (key, fecha, n) =>
+            lista.push({ ...n, key, fecha: fecha || null, cuando: fechaRel(fecha), nuevo: !leidas.has(key) });
+          if (ME.rol === "c") {
+            S.c.posts.forEach((p) => {
+              const emp = p.emp || "La empresa";
+              const puesto = p.puesto || "tu postulación";
+              const aChat = p.chat ? "#/c/chat/" + p.chat : "#/c/postulaciones";
+              if (p.estado === "Respondida") {
+                const tipo = p.respuesta?.tipo;
+                if (tipo === "si")
+                  add(p.id + ":si", p.respondidaAt, { t: `¡Hay match con ${emp}!`, d: `${puesto}: los dos dijeron que sí. Ya pueden hablar por chat.`, go: aChat });
+                else if (tipo === "mas")
+                  add(p.id + ":mas", p.respondidaAt, { t: `${emp} quiere saber un poco más`, d: `Te escribió por ${puesto}. Contestale en el chat.`, go: aChat });
+                else
+                  add(p.id + ":resp", p.respondidaAt, { t: `${emp} respondió tu postulación`, d: tipo === "no" ? `${puesto}: por ahora no avanza.` : puesto, go: "#/c/postulaciones" });
+              } else if (p.vencida) {
+                const vence = new Date(new Date(p.creada || Date.now()).getTime() + p.plazo * DIA_MS).toISOString();
+                add(p.id + ":vencida", vence, {
+                  t: `${emp} no respondió a tiempo`,
+                  d: `Pasó el plazo de ${p.plazo} días para ${puesto}. Su tasa de respuesta bajó y la ven todos los postulantes.`,
+                  go: "#/c/postulaciones",
+                });
+              }
+              if (p.vistaAt) add(p.id + ":vista", p.vistaAt, { t: `${emp} vio tu postulación`, d: puesto, go: "#/c/postulaciones" });
+            });
+          } else if (ME.rol === "e") {
+            S.e.pend.forEach((c) => {
+              const puesto = S.e.busquedas.find((b) => b.id === c.oferta_id)?.puesto || "Tu búsqueda";
+              if (c.quedan < 0) {
+                const vence = new Date(new Date(c.creada || Date.now()).getTime() + c.plazo * DIA_MS).toISOString();
+                add(c.id + ":vencida", vence, {
+                  t: `Se venció el plazo con ${c.corto}`,
+                  d: `${puesto}. Tu tasa bajó, pero todavía podés contestarle.`,
+                  go: "#/e/candidato/" + c.id,
+                });
+              } else
+                add(c.id + ":nueva", c.creada, {
+                  t: `Nueva postulación de ${c.corto}`,
+                  d: `${puesto} · ${venceTxt(c.quedan).toLowerCase()}`,
+                  go: "#/e/candidato/" + c.id,
+                });
+            });
+          }
+          lista.sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+          return lista;
+        }
+        function marcarNotifsLeidas(keys) {
+          const leidas = leerSet("me-notif-leidas");
+          keys.filter(Boolean).forEach((k) => leidas.add(k));
+          guardarSet("me-notif-leidas", leidas);
+        }
+
+        // Si la empresa dijo "Lo quiero conocer" y el postulante todavía no lo vio, mostrar «¡Hay match!» una vez
+        function revisarMatchNuevo() {
+          if (ME.rol !== "c") return;
+          const vistos = leerSet("me-match-visto");
+          const nuevos = Object.keys(S.c.chats).filter((id) => S.c.chats[id].match && !vistos.has(id));
+          if (!nuevos.length) return;
+          const tranquilas = ["#/c/feed", "#/c/postulaciones", "#/c/notificaciones", "#/c/perfil", "#/c/mensajes"];
+          if (!tranquilas.includes(location.hash)) return;
+          nuevos.forEach((id) => vistos.add(id));
+          guardarSet("me-match-visto", vistos);
+          go("#/c/match/" + nuevos[nuevos.length - 1]);
         }
 
         /* ---------- Autenticación ---------- */
@@ -6189,7 +6440,11 @@ async function toggleBusqueda(id) {
             toast("Escribí tu correo primero.");
             return;
           }
-          const { error } = await sb.auth.resend({ type: "signup", email });
+          const { error } = await sb.auth.resend({
+            type: "signup",
+            email,
+            options: { emailRedirectTo: location.origin + location.pathname },
+          });
           toast(
             error
               ? "No pudimos reenviar el correo. Probá de nuevo en unos minutos."
@@ -6214,6 +6469,8 @@ async function toggleBusqueda(id) {
             email,
             password,
             options: {
+              // El enlace del correo vuelve al mismo sitio donde se creó la cuenta (preview, staging o producción)
+              emailRedirectTo: location.origin + location.pathname,
               data: { rol: kind, nombre, display_name: nombre, full_name: nombre, datos: perfilDatos() },
             },
           });

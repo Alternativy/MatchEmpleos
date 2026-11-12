@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   static-tests:
-    name: 18 static contract tests
+    name: Static contract tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -33,4 +33,4 @@ jobs:
           node-version: 22
 
       - name: Run test suite
-        run: node --test tests/real-user-offers.test.mjs
+        run: node --test tests/*.test.mjs

@@ -182,3 +182,18 @@ test("el uso anónimo de IA queda en tabla privada con RLS y RPC exclusivas de s
   assert.match(anonymousSql, /grant execute on function public\.reserve_anonymous_ai_usage\(text\) to service_role/i);
   assert.match(anonymousSql, /grant execute on function public\.complete_anonymous_ai_usage\(text, boolean\) to service_role/i);
 });
+test("los Deploy Preview de Netlify siempre usan staging y registran el host seleccionado", () => {
+  assert.match(html, /location\.hostname === "netlify\.app" \|\| location\.hostname\.endsWith\("\.netlify\.app"\)/);
+  assert.match(html, /!HOST_ES_NETLIFY && HOSTS_PRODUCCION\.includes\(location\.hostname\) \? "prod" : "staging"/);
+  assert.match(html, /hostname: location\.hostname, entorno: ENTORNO/);
+});
+
+test("el CV de registro se conserva localmente hasta confirmar la cuenta y se asocia al mismo correo", () => {
+  assert.match(html, /indexedDB\.open\(CV_PENDIENTE_DB, 1\)/);
+  assert.match(html, /email: email\.toLowerCase\(\)/);
+  assert.match(html, /CV_PENDIENTE_MAX_AGE = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(html, /if \(evento === "SIGNED_IN" && session\) await subirCVPendienteSesion\(\)/);
+  assert.match(html, /pendiente\.email \|\| ""\) !== \(ME\.email \|\| ""\)\.toLowerCase\(\)/);
+  assert.match(html, /if \(ok\) \{\s*try \{\s*await borrarCVPendiente\(\)/);
+  assert.match(html, /conservamos tu CV en este navegador y lo subiremos al confirmar tu cuenta/);
+});

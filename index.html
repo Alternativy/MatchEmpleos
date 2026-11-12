@@ -4,8 +4,8 @@
     <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
-    <link rel="icon" href="img/favicon.ico" sizes="any" />
-    <link rel="manifest" href="site.webmanifest" />
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="manifest" href="img/site.webmanifest" />
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Match Empleos: Acá te contestan</title>
@@ -3870,7 +3870,9 @@
         // Días que le quedan a la empresa para responder (negativo si ya venció)
         function diasRestantes(creada, plazo) {
           const vence = new Date(creada || Date.now()).getTime() + (plazo || 3) * DIA_MS;
-          return Math.ceil((vence - Date.now()) / DIA_MS);
+          const diferencia = vence - Date.now();
+          // Una vez superado el vencimiento, nunca mostrar "Vence hoy".
+          return diferencia <= 0 ? -1 : Math.ceil(diferencia / DIA_MS);
         }
         function venceTxt(q) {
           return q < 0 ? "Plazo vencido" : q === 0 ? "Vence hoy" : `Vence en ${q} día${q === 1 ? "" : "s"}`;
@@ -4661,11 +4663,18 @@
           if (!window.confirm("¿Seguro? Tu cuenta y todos tus datos se van a borrar para siempre.")) return;
           btn.disabled = true;
           const uid = ME.id;
-          // Primero los archivos propios (las políticas de Storage solo dejan borrar la carpeta de cada uno)
-          await Promise.all([
-            sb.storage.from("cvs").remove([`${uid}/cv.pdf`]).catch(() => null),
-            sb.storage.from("avatars").remove([`${uid}/avatar`]).catch(() => null),
+          // No eliminar la cuenta si Storage no confirmó la eliminación de sus archivos.
+          const archivos = await Promise.allSettled([
+            sb.storage.from("cvs").remove([`${uid}/cv.pdf`]),
+            sb.storage.from("avatars").remove([`${uid}/avatar`]),
           ]);
+          const errorArchivos = archivos.find((r) => r.status === "rejected" || r.value?.error);
+          if (errorArchivos) {
+            console.error("[storage] No se pudieron eliminar todos los archivos de la cuenta", errorArchivos);
+            toast("No pudimos eliminar tus archivos. Tu cuenta sigue activa; probá de nuevo.");
+            if (btn.isConnected) btn.disabled = false;
+            return;
+          }
           const ok = await DB.eliminarCuenta();
           if (!ok) {
             toast("No pudimos eliminar tu cuenta. Escribinos a matchempleos@gmail.com.");

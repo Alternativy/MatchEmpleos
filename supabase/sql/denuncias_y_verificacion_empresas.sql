@@ -1,5 +1,14 @@
 -- Denuncias de empresas y verificación manual por el equipo de Match Empleos.
--- Aplicado en el proyecto Supabase de testing: gtnxlkqumppeintdpycn.
+-- Alineado con el esquema y las políticas verificadas en Supabase producción
+-- (mijmzywmrazzaqypuwhu, 2026-11-12).
+--
+-- Este archivo es un script idempotente de referencia para este modelo de producción.
+-- Staging todavía conserva una política INSERT anterior para denuncias; comparar
+-- ambos entornos antes de aplicar cambios allí. No ejecutarlo a ciegas en otro proyecto.
+
+create schema if not exists private;
+revoke all on schema private from public, anon;
+grant usage on schema private to authenticated;
 
 create table if not exists public.denuncias (
   id uuid primary key default gen_random_uuid(),
@@ -18,7 +27,8 @@ create table if not exists public.denuncias (
   )),
   motivo_otro text,
   mensaje text not null default '' check (char_length(mensaje) <= 2000),
-  estado text not null default 'pendiente' check (estado in ('pendiente','en_revision','resuelta','desestimada')),
+  estado text not null default 'pendiente'
+    check (estado in ('pendiente', 'en_revision', 'resuelta', 'desestimada')),
   created_at timestamptz not null default now(),
   constraint denuncias_motivo_otro_check check (
     (motivo = 'Otros' and nullif(btrim(motivo_otro), '') is not null)
@@ -26,71 +36,100 @@ create table if not exists public.denuncias (
   )
 );
 
-create index if not exists denuncias_empresa_created_idx on public.denuncias (empresa_id, created_at desc);
-create index if not exists denuncias_estado_created_idx on public.denuncias (estado, created_at desc);
-create index if not exists denuncias_postulacion_idx on public.denuncias (postulacion_id);
+create index if not exists denuncias_empresa_created_idx
+  on public.denuncias (empresa_id, created_at desc);
+create index if not exists denuncias_estado_created_idx
+  on public.denuncias (estado, created_at desc);
+create index if not exists denuncias_postulacion_idx
+  on public.denuncias (postulacion_id);
 
 alter table public.denuncias enable row level security;
 revoke all on public.denuncias from anon, authenticated;
 grant insert on public.denuncias to authenticated;
 
-drop policy if exists "Los postulantes pueden denunciar empresas vinculadas a sus postulaciones" on public.denuncias;
+-- La validación se encapsula en private para evitar recursión entre las políticas
+-- RLS de denuncias, perfiles, postulaciones y búsquedas.
+create or replace function private.puede_denunciar_empresa(
+  p_empresa_id uuid,
+  p_postulacion_id text,
+  p_chat_id text default null
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+      from public.perfiles perfil
+      join public.postulaciones p on p.candidato_id = perfil.id
+      join public.busquedas b on b.id = p.oferta_id
+     where perfil.id = (select auth.uid())
+       and perfil.rol = 'c'
+       and p.id = p_postulacion_id
+       and b.empresa_id = p_empresa_id
+       and (
+         p_chat_id is null
+         or exists (
+           select 1
+             from public.chats ch
+            where ch.id = p_chat_id
+              and ch.postulacion_id = p.id
+              and ch.candidato_id = perfil.id
+              and ch.empresa_id = b.empresa_id
+         )
+       )
+  );
+$$;
+
+revoke all on function private.puede_denunciar_empresa(uuid, text, text) from public, anon;
+grant execute on function private.puede_denunciar_empresa(uuid, text, text) to authenticated;
+
+drop policy if exists "Los postulantes pueden denunciar empresas vinculadas a sus postulaciones"
+  on public.denuncias;
 create policy "Los postulantes pueden denunciar empresas vinculadas a sus postulaciones"
 on public.denuncias
 for insert
 to authenticated
 with check (
   denuncias.denunciante_id = (select auth.uid())
-  and exists (
-    select 1
-    from public.perfiles perfil
-    join public.postulaciones p on p.candidato_id = perfil.id
-    join public.busquedas b on b.id = p.oferta_id
-    where perfil.id = (select auth.uid())
-      and perfil.rol = 'c'
-      and p.id = denuncias.postulacion_id
-      and b.empresa_id = denuncias.empresa_id
-      and (
-        denuncias.chat_id is null
-        or exists (
-          select 1 from public.chats ch
-          where ch.id = denuncias.chat_id
-            and ch.postulacion_id = p.id
-            and ch.candidato_id = perfil.id
-            and ch.empresa_id = b.empresa_id
-        )
-      )
-  )
+  and private.puede_denunciar_empresa(empresa_id, postulacion_id, chat_id)
 );
 
--- Esta tabla es el único dato público de verificación. No se puede escribir desde el frontend.
+-- Fuente pública mínima del distintivo visual. Los usuarios solo pueden consultar;
+-- las altas y bajas se producen mediante la revisión manual interna.
 create table if not exists public.empresas_verificadas (
   empresa_id uuid primary key references public.perfiles(id) on delete cascade,
   verified_at timestamptz not null default now()
 );
+
 alter table public.empresas_verificadas enable row level security;
 revoke all on public.empresas_verificadas from anon, authenticated;
 grant select on public.empresas_verificadas to authenticated;
-drop policy if exists "Usuarios autenticados pueden consultar empresas verificadas" on public.empresas_verificadas;
+
+drop policy if exists "Usuarios autenticados pueden consultar empresas verificadas"
+  on public.empresas_verificadas;
 create policy "Usuarios autenticados pueden consultar empresas verificadas"
 on public.empresas_verificadas
 for select
 to authenticated
 using (true);
 
--- Expediente interno. No está expuesto al Data API ni a usuarios finales.
-create schema if not exists private;
+-- Expediente interno: no tiene políticas ni privilegios para usuarios finales.
 create table if not exists private.empresa_verificacion_revisiones (
   empresa_id uuid primary key references public.perfiles(id) on delete cascade,
-  estado text not null default 'pendiente' check (estado in ('pendiente','verificada','rechazada')),
+  estado text not null default 'pendiente'
+    check (estado in ('pendiente', 'verificada', 'rechazada')),
   notas_internas text,
   revisado_por uuid references auth.users(id) on delete set null,
   revisado_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
 alter table private.empresa_verificacion_revisiones enable row level security;
-revoke all on private.empresa_verificacion_revisiones from anon, authenticated;
+revoke all on private.empresa_verificacion_revisiones from public, anon, authenticated;
 
 create or replace function private.sync_empresa_verificada()
 returns trigger
@@ -110,44 +149,19 @@ begin
   return new;
 end;
 $$;
+
 revoke all on function private.sync_empresa_verificada() from public, anon, authenticated;
 
-drop trigger if exists sync_empresa_verificada on private.empresa_verificacion_revisiones;
+drop trigger if exists sync_empresa_verificada
+  on private.empresa_verificacion_revisiones;
 create trigger sync_empresa_verificada
-after insert or update of estado, revisado_at on private.empresa_verificacion_revisiones
+after insert or update of estado, revisado_at
+on private.empresa_verificacion_revisiones
 for each row execute function private.sync_empresa_verificada();
 
-comment on table public.denuncias is 'Denuncias de empresas enviadas por postulantes. El equipo Match Empleos las revisa desde Supabase SQL Editor con permisos administrativos.';
-comment on table public.empresas_verificadas is 'Listado público mínimo de empresas verificadas; solo el equipo Match Empleos puede modificarlo desde SQL Editor.';
-comment on table private.empresa_verificacion_revisiones is 'Registro interno de revisión y verificación de empresas; accesible al equipo desde SQL Editor.';
-
-
--- Los postulantes también pueden consultar las búsquedas a las que ya se postularon,
--- aunque hayan sido pausadas o cerradas, para poder denunciar y revisar el chat.
-drop policy if exists "candidatos puede leer busquedas activas" on public.busquedas;
-create policy "candidatos leen busquedas activas y postulaciones propias"
-on public.busquedas
-for select
-to authenticated
-using (
-  estado = 'Activa'
-  or exists (
-    select 1
-    from public.postulaciones p
-    where p.oferta_id = busquedas.id
-      and p.candidato_id = (select auth.uid())
-  )
-);
-
-
--- Mantener el texto exacto que presenta el formulario de denuncia.
-alter table public.denuncias drop constraint if exists denuncias_motivo_check;
-alter table public.denuncias add constraint denuncias_motivo_check check (motivo in (
-  'Es una empresa falsa',
-  'Suplantación de identidad',
-  'Lenguaje inapropiado',
-  'Condiciones Inaceptables',
-  'Contenidos obscenos o de odio',
-  'Spam o Confuso',
-  'Otros'
-));
+comment on table public.denuncias is
+  'Denuncias de empresas enviadas por postulantes. El equipo Match Empleos las revisa desde Supabase SQL Editor con permisos administrativos.';
+comment on table public.empresas_verificadas is
+  'Listado público mínimo de empresas verificadas; solo el equipo Match Empleos puede modificarlo desde SQL Editor.';
+comment on table private.empresa_verificacion_revisiones is
+  'Registro interno de revisión y verificación de empresas; accesible al equipo desde SQL Editor.';

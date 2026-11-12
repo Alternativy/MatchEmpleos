@@ -196,4 +196,5 @@ test("el CV de registro se conserva localmente hasta confirmar la cuenta y se as
   assert.match(html, /pendiente\.email \|\| ""\) !== \(ME\.email \|\| ""\)\.toLowerCase\(\)/);
   assert.match(html, /if \(ok\) \{\s*try \{\s*await borrarCVPendiente\(\)/);
   assert.match(html, /conservamos tu CV en este navegador y lo subiremos al confirmar tu cuenta/);
+  assert.match(html, /emailRedirectTo: location\.origin \+ location\.pathname/);
 });

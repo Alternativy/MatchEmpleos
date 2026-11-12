@@ -3428,7 +3428,7 @@
                       <li>Creá tu perfil de postulante verificado.</li>
                       <li>Escogé categorías de trabajo preferidas.</li>
                       <li>Podés elegir o no una postulación.</li>
-                      <li>Tenés 5 Postulaciones por día.</li>
+                      <li>Tenés 5 postulaciones por semana.</li>
                       <li>Posibilidad de dialogar con la empresa.</li>
                       <li>La empresa está obligada a responderte, vos tenés derecho a saber.</li>
                       <li>Si te aceptan, felicidades, hay MATCH.</li>
@@ -4278,7 +4278,6 @@
             : `<div class="reg-top"><span class="reg-bar"></span>${backBtn(back)}</div>`;
         }
         function sobreIA(inputId, initialValue = "") {
-          if (ENTORNO !== "staging") return "";
           const ai = ME.datos?.ai || {};
           const yaAplicada = inputId === "rc-sobre" ? regDraftAIUsed
             : inputId === "re-desc" ? regDraftCompanyAIUsed

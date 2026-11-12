@@ -4,6 +4,7 @@
 -- SECURITY DEFINER. No otorgar acceso directo a anon ni authenticated.
 
 create schema if not exists private;
+revoke all on schema private from public, anon;
 
 create table if not exists private.anonymous_ai_usage (
   key_hash text primary key

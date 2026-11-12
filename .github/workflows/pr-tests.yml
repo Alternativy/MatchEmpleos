@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   static-tests:
-    name: 18 static contract tests
+    name: 20 static contract tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

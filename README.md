@@ -16,7 +16,17 @@ Este documento está pensado para dos lectores: personas del equipo y agentes de
 | Entornos | **Staging** (`gtnxlkqumppeintdpycn`) y **producción** (`mijmzywmrazzaqypuwhu`). Son proyectos separados. |
 | Selección de entorno | Por host: `matchempleos.com.ar` y `www.matchempleos.com.ar` usan producción; cualquier otro host (GitHub Pages, Netlify de pruebas, localhost) usa staging. |
 | Migraciones SQL | `supabase/migrations/`, de `000` a `009`. Ver [sección 8](#8-base-de-datos). |
-| Repos | `Alternativy/MatchEmpleos` (repo oficial) y `Alternativy/test-empleos` (pruebas). |
+| Repos | `Alternativy/test-empleos` (desarrollo y pruebas) y el repo `matchempleos` (producción). Ver [flujo de trabajo](#flujo-de-trabajo). |
+
+---
+
+## Flujo de trabajo
+
+- **Desarrollo en `test-empleos`.** Todos los cambios se hacen y se prueban en este repo. Su despliegue (GitHub Pages y el sitio de Netlify de pruebas) usa **staging**.
+- **Pull request a `matchempleos` para producción.** Cuando una funcionalidad o un cambio relevante está probado en staging, se abre un pull request desde `test-empleos` hacia el repo `matchempleos`, que es el de producción. Los cambios pequeños (textos, correcciones) pueden ir directo al repo de pruebas, pero no llegan a producción sin un pull request.
+- **Migraciones SQL.** Se aplican primero en staging. Para producción, se aplican al proyecto de producción **antes** del merge, y en el mismo orden de la carpeta `supabase/migrations/`.
+- **Checklist antes del pull request:** ejecutar la sección 10 completa en staging, validar la sintaxis de los `<script>` de `index.html`, y revisar que la configuración de producción (`ENTORNOS.prod`, `HOSTS_PRODUCCION`) no cambió sin querer.
+- **Pendientes de publicación:** los que dependan de la configuración del dashboard o de archivos fuera del código están en la sección 12.
 
 ---
 
@@ -37,6 +47,7 @@ index.html                              App completa (estilos, datos, routing, U
 vendor/supabase.js                      Cliente de Supabase 2.45.4 (código de terceros, no editar)
 img/                                    Logos, avatares, ilustraciones y favicons
   favicon-16x16.png, favicon-32x32.png, apple-touch-icon.png, site.webmanifest
+supabase/functions/mejorar-sobre/index.ts  Edge Function para mejorar el campo “Sobre vos” con IA
 supabase/migrations/
   000_esquema_produccion.sql            Esquema base completo, consolidado (ver sección 8)
   001_crud_inicial.sql                  Histórica, superada
@@ -48,6 +59,10 @@ supabase/migrations/
   007_cupo_semanal.sql                  Cupo de 5 postulaciones por semana (RPC postular)
   008_empresa_actualiza_postulaciones.sql
   009_alinear_staging_produccion.sql    Alineación de permisos de staging con producción
+  010_busquedas_jornada_turno_y_borrado.sql  Jornada y turno en búsquedas; borrado seguro (RPC borrar_busqueda)
+  011_pausar_busquedas.sql              Búsquedas pausadas no reciben postulaciones (postular valida estado)
+robots.txt                             Permite indexar la raíz y apunta al sitemap
+sitemap.xml                            Lista la landing (única URL indexable)
 README.md                               Este documento
 ```
 
@@ -55,7 +70,7 @@ README.md                               Este documento
 
 1. **Estilos** (`<style>`): variables CSS en `:root` (`--navy`, `--green`, `--gray`, `--navy2`, `--line`, etc.), con paleta azul prusiano, verde primaveral y alabastro. Clases como `.btn`, `.field`, `.chip`, `.ccard`, `.bub`, `.fila`.
 2. **Script de datos** (primer `<script>`): configuración de entornos (`ENTORNOS`, `HOSTS_PRODUCCION`), cliente de Supabase (`sb`), identidad (`ME`), helpers de Storage (`subirFoto`, `subirCV`, `verCV`) y el objeto `DB` con todas las escrituras y lecturas.
-3. **Script principal** (segundo `<script>`, dentro de una IIFE): estado global `S`, datos de ejemplo (`freshState`), plantillas de pantallas, routing (`route`), autenticación, handlers de eventos y arranque (`hidratar`, Realtime).
+3. **Script principal** (segundo `<script>`, dentro de una IIFE): estado global `S`, estado inicial vacío (`freshState`), plantillas de pantallas, routing (`route`), autenticación, handlers de eventos y arranque (`hidratar`, Realtime).
 
 ---
 
@@ -86,22 +101,46 @@ La app usa rutas por hash (`#/...`). No hay servidor de rutas.
 ## 5. Estado de la aplicación
 
 - `S` es el estado de la UI en memoria: `S.c` (candidato) y `S.e` (empresa). Se construye con `freshState()`.
-- `freshState()` **contiene datos de ejemplo** para el modo demo.
-- En una sesión real, `hidratar()` lee de Supabase: postulaciones, búsquedas, respuestas (`candidatos_estado`), mensajes, chats, cupo y tasa del usuario. Un candidato real no recibe las postulaciones ni los chats demo; una empresa real no recibe búsquedas ni notificaciones demo.
+- `freshState()` inicializa las colecciones vacías. No precarga perfiles, ofertas, postulaciones, chats ni notificaciones ficticias.
+- `hidratar()` carga desde Supabase las postulaciones, búsquedas, respuestas (`candidatos_estado`), mensajes, chats, cupo y tasa correspondientes al usuario autenticado. El frontend no combina esos resultados con datos de muestra.
 - **Cupo** (`S.c.cupo`): lo entrega el servidor con `cupo_actual()` al cargar la sesión.
 - **Tasa de respuesta** (`perfiles.tasa`): la calcula el servidor. Es respondidas ÷ total de postulaciones recibidas, y 100 % si no hay ninguna. El cliente la recalcula para mostrarla y no la escribe.
-- Las ofertas reales de empresas llevan `real: true`. "Me interesa" sobre una oferta real llama a la RPC `postular`, que descuenta el cupo y crea la postulación en la misma transacción.
-- `ME` guarda la identidad: `ME.id` (uuid de Auth), `ME.rol` (`'c'` o `'e'`), `ME.nombre`, `ME.email`, `ME.datos`, `ME.avatarUrl` y `ME.demo`.
+- Las ofertas obtenidas de Supabase llevan `real: true` como marca de procedencia. `apply()` rechaza cualquier elemento que no tenga esa marca y llama a la RPC `postular`, que descuenta el cupo y crea la postulación en la misma transacción.
+- `ME` guarda la identidad de la sesión: `ME.id` (uuid de Auth), `ME.rol` (`'c'` o `'e'`), `ME.nombre`, `ME.email`, `ME.datos` y `ME.avatarUrl`.
 
 ---
 
-## 6. Modo demo
+## 6. Sin modo demo
 
-- Los botones "Entrar como candidato" / "Entrar como empresa" de la pantalla de login activan `ME.demo = true`.
-- En demo **no se escribe nada en la base**: `persistir()` devuelve `null` antes de ejecutar cualquier consulta, y las RPC no se llaman.
-- Se controla con la constante `DEMO_HABILITADO` (en `index.html`). Ponerla en `false` oculta los botones y desactiva `entrarDemo`.
-- Por ahora está en `true`, porque el equipo lo usa para pruebas.
-- Las cuentas demo conservan sus datos de ejemplo (Tomás Ferreyra, Café Mercado, Malena, Lucía, Farmacia Sur, etc.). No deben aparecer en cuentas reales.
+- Se eliminaron del frontend los botones de acceso de demostración, el estado de sesión demo y la función que permitía entrar sin autenticación.
+- `freshState()` comienza con listas y objetos vacíos. Los perfiles, búsquedas, postulaciones, conversaciones y datos de empresa se obtienen de Supabase.
+- Se quitaron los perfiles y ofertas ficticios, las notificaciones precargadas y las respuestas automáticas simuladas.
+- Este cambio afecta al código del frontend. **No se borraron datos ni se aplicaron migraciones en Supabase**: staging conserva datos y columnas históricas de pruebas. No deben confundirse con datos actuales de usuarios ni mostrarse en la aplicación.
+
+## 6c. Mejora del campo “Sobre vos” con IA
+
+- El registro de postulante (paso 5) y la edición de datos personales muestran el botón **“Mejorar con IA”** debajo del texto original.
+- El botón envía el texto a la Edge Function `mejorar-sobre`. La sugerencia aparece en un segundo campo editable; no reemplaza el original automáticamente.
+- **“Usar esta versión”** copia la sugerencia al campo original. La persona puede editarla antes de guardarla o crear la cuenta.
+- La función usa OpenAI Responses API con el modelo predeterminado `gpt-4.1-mini` (se puede cambiar con `OPENAI_MODEL`). Sus instrucciones prohíben inventar experiencia, estudios, habilidades o logros que no estén en el texto original.
+- La clave `OPENAI_API_KEY` se configura como secreto de la Edge Function en Supabase. Nunca debe guardarse en `index.html`, el repositorio ni el navegador. `store: false` se envía en la solicitud al proveedor.
+- La función valida el cuerpo y limita el texto a 4.000 caracteres. Tiene un límite de frecuencia en memoria por IP como protección básica; no reemplaza un rate limiter persistente para producción.
+- La función acepta el JWT público del proyecto (`verify_jwt: true`); puede utilizarse durante el onboarding, antes de que el usuario cree su cuenta. No escribe información en la base de datos.
+- La integración se desarrolla únicamente en el proyecto Supabase **Match Empleos** (staging). No desplegar ni configurar en **Match Empleos prod** sin un cambio separado y aprobado.
+- Para habilitarla en un entorno Supabase, desplegar `mejorar-sobre` y configurar el secreto `OPENAI_API_KEY` en Edge Functions > Secrets. Si se utiliza una rama de desarrollo de Supabase, el secreto debe configurarse también en esa rama.
+
+---
+
+## 6b. SEO y contenido estático de la landing
+
+- `index.html` tiene metadatos en el `<head>`: `title`, `meta description`, `canonical`, Open Graph, Twitter Card y datos estructurados JSON-LD (`Organization` y `WebSite`). No hay `FAQPage`, a propósito.
+- El script de `<head>` agrega `<meta name="robots" content="noindex, nofollow">` cuando el host no es `matchempleos.com.ar` ni `www.matchempleos.com.ar`. Por eso los entornos de prueba no se indexan.
+- La landing tiene **una sola fuente de texto**: el HTML dentro de `<div id="root">` en `index.html` (encabezado, hero, "¿Quiénes somos?", "Situación actual en Argentina", "¿Cómo funciona?", "¡El futuro no espera, vos tampoco!" y pie). Ese HTML se guarda en `LANDING_HTML` al arrancar. `home()` lo reutiliza y solo ajusta lo que depende de la sesión (enlace del logo y menú de cuenta). `siteFooter()` toma el pie del mismo HTML.
+- **Para cambiar un texto de la landing, editá solo el HTML de `#root`.** No hay copia en JavaScript. El pie que usan las demás pantallas sale del mismo bloque.
+- Como el contenido existe en el HTML, se ve y se indexa aunque no cargue JavaScript.
+- `titleFor()` cambia el título de la pestaña según la vista. La landing mantiene el título completo.
+- Las imágenes llevan `loading="lazy"`, excepto el hero y el logo del encabezado.
+- Las rutas con hash (`#/privacidad`, `#/terminos`, `#/ayuda`) no son URLs que un buscador indexe por separado. Está pendiente separarlas en páginas propias (ver sección 12).
 
 ---
 
@@ -136,7 +175,7 @@ La app usa rutas por hash (`#/...`). No hay servidor de rutas.
 
 ### Cerrar sesión
 
-- Desde la landing o desde la sección "Salir" de la app, `#/c/salir` o `#/e/salir`. Llama a `sb.auth.signOut()` (salvo en demo) y limpia `ME` y `S`.
+- Desde la landing o desde la sección "Salir" de la app, `#/c/salir` o `#/e/salir`. Llama a `sb.auth.signOut()` y limpia `ME` y `S`.
 
 ### Reglas de validación en formularios
 
@@ -154,13 +193,22 @@ Los campos conservan lo escrito al volver atrás: `regField()` y los inputs de `
 
 ---
 
+## Búsquedas de la empresa
+
+- Cada búsqueda tiene puesto, descripción, **jornada** y **turno** (columnas `busquedas.jornada` y `busquedas.turno`, arrays de texto).
+- En "Búsquedas" del panel, cada tarjeta abre el detalle de la búsqueda. Desde ahí se puede ver los candidatos (`Ver candidatos`), editar la búsqueda o eliminarla.
+- **Pausar una búsqueda** cambia `busquedas.estado` entre `Activa` y `Pausada`. Una búsqueda pausada no aparece en el feed de candidatos y `postular` la rechaza. Las postulaciones que ya tiene siguen visibles para la empresa.
+- **Eliminar una búsqueda** llama a la RPC `borrar_busqueda`, que borra también sus postulaciones, respuestas, chats y mensajes. Es irreversible. La app pide confirmación antes.
+
+---
+
 ## 8. Base de datos
 
 ### Proyectos
 
 | Entorno | Proyecto | Uso |
 |---|---|---|
-| Staging | `gtnxlkqumppeintdpycn` (us-east-1) | Pruebas. Tiene datos de prueba y chats demo heredados. |
+| Staging | `gtnxlkqumppeintdpycn` (us-east-1) | Entorno de pruebas. Conserva datos y estructuras históricas; el frontend ya no ofrece acceso demo ni los precarga. |
 | Producción | `mijmzywmrazzaqypuwhu` (us-east-2) | Dominio `matchempleos.com.ar`. Arranca limpio, sin datos de prueba. |
 
 Los dos proyectos se configuran por separado: esquema, permisos, buckets, URLs de redirección y SMTP. Las migraciones se aplican a cada uno por separado.
@@ -176,7 +224,7 @@ Diferencias intencionales entre staging y producción (ver migración `009`):
 - `002` es **destructiva**: recrea las tablas. No se vuelve a correr sobre una base con datos.
 - `003` borra los datos de prueba de chats y candidatos en `si`/`mas`. Solo corresponde a staging. **No correrla en producción** (producción ya tiene su estado correcto).
 - `004` a `009` son para staging. Su efecto ya está incluido en `000`.
-- Todo cambio futuro va en un archivo nuevo, numerado a partir de `010`. No cambiar tablas a mano en el editor de Supabase.
+- Todo cambio futuro va en un archivo nuevo, numerado a partir de `012`. Las `010` y `011` ya están aplicadas en staging y en producción. No cambiar tablas a mano en el editor de Supabase.
 
 ### Tablas
 
@@ -264,16 +312,16 @@ Esto no se puede versionar con SQL. Hay que hacerlo en cada proyecto.
 Estos puntos **bloquean o condicionan producción**. Están documentados para que nadie los pase por alto.
 
 1. **El rol se toma de la metadata del registro.** Cualquiera con la anon key puede llamar a `signUp` con `rol: 'e'`. Solución propuesta: asignar el rol de empresa desde el servidor (verificación manual o función protegida).
-2. **Datos de ejemplo en el código.** `freshState()`, `offerById` y las plantillas siguen teniendo datos ficticios. Las sesiones reales no los mezclan en los listados principales, pero el código sigue cargándolos para el modo demo.
-3. **Historial de chats demo.** `hidratar()` todavía lee las claves históricas `c:<oferta>` y `e:<candidato>`. Solo tiene sentido en staging, donde están esos datos.
+2. **Datos históricos de staging.** El frontend ya no contiene ofertas ni perfiles ficticios y `freshState()` comienza vacío. El proyecto de staging conserva registros históricos de pruebas que no fueron borrados; revisar su origen antes de depurarlos.
+3. **Esquema heredado de chats.** Staging conserva las columnas `mensajes.de` y `mensajes.chat_key` por compatibilidad con registros históricos. El frontend actual trabaja con las conversaciones reales vinculadas a `chats` y `mensajes.chat_id`.
 4. **Contraseñas filtradas y CAPTCHA.** La protección contra contraseñas filtradas requiere plan Pro. Mientras tanto, la longitud mínima de contraseña se controla en el cliente (8 caracteres) y puede subirse en Auth.
 5. **SMTP de Supabase.** Tiene límites bajos. Antes de escalar, usar un proveedor propio.
 6. **Mensajes de error reveladores.** "Ya existe una cuenta con ese correo" permite averiguar qué correos están registrados. Es una decisión de producto; debería ser un mensaje genérico.
-7. **Los datos del onboarding no son editables** después del registro. Se guardan en `perfiles.datos`, pero no hay pantalla para modificar todos los campos. Hoy se pueden editar nombre, edad, ubicación, puesto buscado y "Sobre vos", y en la empresa nombre, responsable, rubro, tamaño, ubicación y descripción.
-8. **Notificaciones.** Las notificaciones del candidato no se persisten en una tabla; son estado de UI. Las notificaciones base filtran Farmacia Sur y Supermercado Norte.
+7. **Correo no editable desde la app.** Los datos de "Datos personales" (candidato) y "Datos empresariales" (empresa) se editan todos, salvo el correo, que es el usuario de acceso. Cambiarlo requiere el flujo de cambio de correo de Auth, que todavía no está implementado.
+8. **Notificaciones.** Las notificaciones del candidato no se persisten en una tabla; son estado de UI. El frontend no precarga notificaciones ficticias.
 9. **El CV se sube solo con sesión.** Si el registro requiere confirmar el correo, el archivo elegido en el paso 5 no se puede guardar; el usuario tiene que subirlo después desde "Datos personales".
-10. **Sin pruebas automatizadas.** Todo se prueba a mano. Ver checklist en la sección 10.
-11. **Respuestas automáticas.** Los temporizadores de `apply()` y `enviarResp()` solo corren para ofertas demo. Las cuentas reales no reciben respuestas automáticas.
+10. **Pruebas automatizadas parciales.** `tests/real-user-offers.test.mjs` verifica que no exista acceso demo, que el estado inicial esté vacío y que las ofertas se carguen desde Supabase. Ejecutar con `node --test tests/real-user-offers.test.mjs`. El resto de los flujos sigue requiriendo el checklist manual de la sección 10.
+11. **Respuestas automáticas.** Se eliminaron las respuestas simuladas y los temporizadores de demostración. Los mensajes y respuestas deben originarse en acciones reales de los usuarios.
 12. **Métodos heredados.** `DB.setCupo` y `DB.setTasa` son no-ops; la app ya no escribe esos valores desde el cliente.
 13. **Columnas heredadas en staging.** `mensajes.de` y `mensajes.chat_key` siguen en staging por el historial demo. No se replican en producción.
 
@@ -283,8 +331,10 @@ Estos puntos **bloquean o condicionan producción**. Están documentados para qu
 
 Antes de mergear a `main` o de publicar en producción, probar en **staging** con dos cuentas reales (una empresa y un candidato):
 
-**Modo demo**
-- [ ] Entrar como candidato y como empresa, postular y publicar. No aparecen filas nuevas en Supabase.
+**Ausencia de datos demo**
+- [ ] La pantalla de login no ofrece accesos de demostración.
+- [ ] Sin una sesión autenticada, las rutas privadas redirigen al login.
+- [ ] Una cuenta nueva comienza sin ofertas, postulaciones, chats ni notificaciones precargadas.
 
 **Registro y acceso**
 - [ ] "Busco trabajo" con datos inválidos: botones deshabilitados, aviso visible.
@@ -306,7 +356,7 @@ Antes de mergear a `main` o de publicar en producción, probar en **staging** co
 - [ ] El estado de la postulación pasa a "Respondida" cuando la empresa responde.
 - [ ] "Me interesa" de la empresa con postulación previa abre el chat. "Pidió más información" no lo abre.
 - [ ] Chat: los mensajes propios aparecen a la derecha y los de la empresa a la izquierda. El avatar y el nombre de la empresa se ven en la lista y en el encabezado.
-- [ ] Notificaciones y mensajes no muestran datos demo.
+- [ ] Notificaciones y mensajes corresponden únicamente a interacciones reales de la cuenta.
 
 **Empresa**
 - [ ] Publicar una búsqueda: aparece en el panel y en la lista de búsquedas.
@@ -335,13 +385,139 @@ Si sos un agente que trabaja en este repo, seguí estas reglas:
 5. **No llames a `sb.*` dentro de un callback de `onAuthStateChange` sin `setTimeout`.** Ya está resuelto en el código: no lo reviertas.
 6. **Respetá la validación de campos** descrita en la sección 7. Si agregás un campo, definí sus reglas.
 7. **Los textos de la interfaz van en español rioplatense**, con voseo.
-8. **Cualquier cambio de esquema va en una migración nueva**, numerada a partir de `010`. Nunca edites una migración ya aplicada.
+8. **Cualquier cambio de esquema va en una migración nueva**, numerada a partir de `012`. Nunca edites una migración ya aplicada.
 9. **Permisos explícitos.** Toda tabla nueva necesita `grant` explícito para `authenticated`, y RLS activo. No asumas que la plataforma los da.
 10. **Nunca dejes que el cliente escriba `cupo`, `tasa` ni `rol`.** Esos valores los calcula el servidor.
 11. **Después de cambiar `index.html`, validá la sintaxis** de cada `<script>` (por ejemplo con `node --check` sobre el contenido extraído).
-12. **No cambies `DEMO_HABILITADO` a `false` sin confirmación del equipo.**
+12. **No reintroduzcas un acceso de demostración ni datos ficticios en `freshState()`.**
 13. **No reutilices las claves `c:<oferta>` / `e:<candidato>` para un chat real nuevo.** Las conversaciones reales usan `chats` y `mensajes.chat_id`.
-14. **No reintroduzcas respuestas automáticas en cuentas reales.** Los temporizadores de `sendChat()`, `enviarResp()` y `apply()` están protegidos por `ME.demo`.
-15. **Al modificar `hidratar()`, preservá la separación demo/real.** Un candidato real no debe recibir las postulaciones o chats de `freshState()`, y una empresa real no debe recibir búsquedas o notificaciones demo.
+14. **No reintroduzcas respuestas automáticas simuladas.** `sendChat()` debe guardar el mensaje escrito por el usuario; las respuestas deben venir de acciones reales de la otra cuenta.
+15. **Al modificar `hidratar()`, cargá los datos desde Supabase sin mezclarlos con datos de muestra.** `freshState()` debe seguir vacío.
 16. **No cambies la selección de entorno** (`HOSTS_PRODUCCION`) sin confirmación: decide a qué base se conecta cada dominio.
 17. **Antes de cambiar la lógica de autenticación**, revisá la sección 7 completa: los pasos de registro, confirmación y login están conectados entre sí.
+
+---
+
+## 12. Pendientes para la próxima publicación a producción
+
+- [ ] **Google Search Console (después del merge a producción):** verificar la propiedad de dominio `matchempleos.com.ar` con el registro TXT en el DNS, pedir indexación de `https://matchempleos.com.ar/` y enviar `sitemap.xml`. Revisar que `matchempleos.netlify.app` no aparezca indexado.
+- [ ] **Imagen para compartir** de 1200×630 para `og:image` (hoy se usa `img/ilus-hero.png`).
+- [ ] **Subir el `site.webmanifest` corregido** a `img/` (nombre, rutas de íconos relativas).
+- [x] **`robots.txt` y `sitemap.xml`** en la raíz de `test-empleos`. Pasan a producción con el pull request.
+- [x] **Landing con una sola fuente de texto** (HTML estático en `#root`).
+- [ ] Ejecutar la sección 8 (Storage y Auth) y la configuración de URLs de redirección de producción.
+- [ ] Páginas legales como URLs propias (`privacidad.html`, `terminos.html`, `ayuda.html`), para indexarlas.
+- [ ] Verificar el dominio en Google Search Console después del merge a producción, pedir indexación de `https://matchempleos.com.ar/` y enviar `sitemap.xml`.
+
+---
+
+## 13. Readaptación de landing según nuevo diseño (noviembre 2026)
+
+Referencia visual: archivo **`Match Empleos Landing (copia).pdf`** entregado por diseño. La implementación se realizó en `index.html`, dentro del HTML estático de `#root`. No se modificó el router, la autenticación, Supabase ni las pantallas internas de la aplicación.
+
+### Cambios aplicados
+
+- [x] Encabezado simplificado con marca a la izquierda y accesos de inicio de sesión / registro a la derecha.
+- [x] Hero azul con título “Bienvenido a Match Empleos”, bajada y llamada a deslizar.
+- [x] Sección “¿Quiénes somos?” con fotografía de fondo, overlay azul y composición alineada a la derecha.
+- [x] Sección “Situación actual en Argentina” con tres indicadores y recurso ilustrado.
+- [x] Sección “¿Cómo funciona?” reorganizada en dos tarjetas: Perfil Postulante y Perfil Empresa.
+- [x] CTA final con ilustración, frase de marca y accesos diferenciados de registro para candidato y empresa.
+- [x] Footer verde con redes, contacto, navegación y leyenda institucional.
+- [x] Reglas responsive para desktop y mobile.
+- [x] Estilos nuevos aislados bajo `.landing-v2` para evitar afectar las pantallas de la aplicación.
+- [x] Se preservaron los destinos existentes del router: `#/login`, `#/registro/c/1`, `#/registro/e/1`, páginas legales y navegación por anclas.
+
+### Discrepancias y validaciones pendientes con diseño / producto
+
+1. **Cupo de postulaciones (bloqueante de contenido):** el PDF indica “Tenés 5 postulaciones por día”. La lógica documentada en la sección 8 renueva el cupo de 5 postulaciones los lunes a las 00:00 de Buenos Aires, es decir, semanalmente. Confirmar si el diseño debe decir “por semana” o si producto quiere modificar la regla del sistema. No se cambió la lógica.
+2. **Obligación de respuesta:** el PDF afirma que la empresa “está obligada a responderte”. La aplicación calcula y muestra una tasa de respuesta, pero no se identificó una regla técnica que obligue a responder dentro de un plazo ni una consecuencia por no hacerlo. Producto debe confirmar si es una promesa/compromiso operativo o si debe reformularse el texto.
+3. **Perfiles verificados:** las tarjetas hablan de perfiles “verificados”. La documentación actual registra perfiles y roles, pero también señala que la asignación del rol empresa todavía puede iniciarse desde metadata del registro. Confirmar qué significa “verificado” y qué proceso lo respalda antes de presentar esa afirmación como una verificación efectiva.
+4. **Estadísticas:** se conservaron los valores del diseño: 16,5%, 43%, 45% y 0,17%, además de los textos asociados. Falta confirmar fuente, período, universo y redacción exacta de cada indicador. En particular, validar la relación “1.500 inserciones sobre 900.000 beneficiarios” y el dato de ghosting de generación Z.
+5. **Red social secundaria:** el PDF muestra `@matchempleos` junto a un ícono de video, pero no identifica de forma inequívoca la plataforma ni su URL. En la landing quedó como texto no enlazado hasta recibir el enlace oficial.
+6. **Fotografía de “Situación actual”:** el PDF muestra una imagen de multitud teñida de verde. Ese recurso no está entre los 19 archivos de imagen del repositorio. `foto-como.jpg` es una escena de personas trabajando frente a una computadora y no corresponde a esa referencia; no debe usarse como sustituto. Hasta recibir el export correcto, el bloque utiliza únicamente una base verde.
+7. **Curvas, recortes y proporciones:** se ajustaron alturas, anchos, escalas tipográficas y transiciones curvas para acercarse a la composición del PDF. Aun así, CSS no garantiza una réplica exacta del arte exportado; requiere captura en navegador y comparación a escala desktop y mobile.
+8. **Copy institucional:** se tomó el texto visible en el PDF. Confirmar si “equipo de cinco estudiantes” y la leyenda de Premios OBRAR Estudiantes 2026 siguen vigentes para la publicación pública.
+
+### Criterio para próximas iteraciones
+
+- Mantener la landing estática dentro de `#root` como única fuente de textos y estructura.
+- No alterar pantallas autenticadas ni lógica de negocio al retocar estilos de la landing.
+- Registrar aquí cualquier diferencia entre promesas de comunicación, reglas reales del producto y comportamiento implementado.
+- Antes de publicar, revisar los puntos anteriores con diseño y producto y validar responsive, enlaces de registro, navegación del footer y consola del navegador.
+
+
+
+## 14. Ajuste de fidelidad visual de landing (noviembre 2026)
+
+Segunda iteración sobre la referencia **`Match Empleos Landing (copia).pdf`**, en la rama `design/landing-fidelidad-pdf`.
+
+### Correcciones aplicadas
+- [x] Se amplió el contenedor principal para acercarlo al ancho útil del diseño original.
+- [x] Se recuperó la escala tipográfica de los titulares, las tarjetas de perfiles, las métricas y el pie de página.
+- [x] Se ajustaron los colores principales a los valores muestreados del PDF: azul `#002146`, verde `#38F48C` y gris `#E8E8E8`.
+- [x] Se evitó reutilizar `foto-quienes.jpg` o `foto-como.jpg` como si fueran la fotografía de multitud del bloque estadístico: no corresponden al diseño.
+- [x] El bloque de estadísticas utiliza una base verde temporal, sin una fotografía de fondo incorrecta.
+- [x] Se incorporaron transiciones curvas para la salida del hero, el bloque de estadísticas, “Cómo funciona” y el CTA.
+- [x] Se aumentaron las alturas de las secciones y tarjetas para evitar que la landing quede visualmente comprimida frente al PDF.
+- [x] Se mantuvo el responsive para tablet y mobile y se preservaron rutas, anclas y lógica de la aplicación.
+
+### Control pendiente
+- [ ] Incorporar el export exacto de la fotografía de multitud que aparece en “Situación actual” y ajustar su encuadre/tinte al PDF.
+- [ ] Generar capturas del navegador a 1568 px de ancho y en mobile, y compararlas con el PDF. La actualización se validó a nivel de estructura del CSS y referencias de assets; no se ejecutó una prueba visual con navegador en esta sesión.
+- [ ] Revisar la curva inferior de “Situación actual” y la continuidad visual entre la ilustración de “Cómo funciona” y el panel del CTA.
+
+---
+
+## 15. Auditoría previa a producción (11 de noviembre de 2026)
+
+**Resultado: NO APTO PARA MERGE / PUBLICACIÓN.** Esta revisión fue estática y de configuración remota; no reemplaza la prueba funcional completa en navegador con cuentas reales.
+
+### Estado del código y repositorios
+
+- [x] test-empleos/main contiene la versión actual de la aplicación y la landing rediseñada.
+- [x] Se verificó que los cuatro bloques script ejecutables de index.html compilan sintácticamente. Esto no demuestra que todos los flujos funcionen en ejecución.
+- [x] La selección de entorno del frontend apunta a staging para hosts de prueba y a producción solo para matchempleos.com.ar y www.matchempleos.com.ar.
+- [x] Se eliminó el modo demo del frontend y se dejó `freshState()` sin datos ficticios. No se borraron datos históricos de staging.
+- [ ] Ejecutar node --test tests/real-user-offers.test.mjs en un entorno Node y registrar el resultado. La existencia del test no equivale a una ejecución aprobada.
+- [ ] Completar el checklist manual de la sección 10 con dos cuentas reales y validar los flujos de registro, recuperación, postulaciones, respuestas, chat, CV, Storage y Realtime.
+- [ ] Comparar visualmente la landing en navegador desktop y mobile contra el diseño aprobado.
+- [ ] Revisar el diff completo del pull request entre Alternativy/test-empleos:main y Alternativy/MatchEmpleos:main antes de aprobarlo. Los repositorios tienen historiales y contenidos distintos; no asumir que una sincronización previa equivale al estado actual.
+
+### Animaciones de la landing: implementación no aprobada
+
+Las animaciones de scroll **no se pudieron implementar de manera correcta**. En index.html hay reglas CSS, atributos data-reveal y un IntersectionObserver, pero la presencia de ese código no significa que el resultado visual cumpla lo pedido. No se consideran terminadas ni aprobadas para producción.
+
+- [ ] Rehacer o corregir las entradas al viewport y comprobarlas visualmente en desktop y mobile.
+- [ ] Verificar las direcciones solicitadas: llamada a deslizar desde la izquierda; texto de “Quiénes somos” desde abajo; encabezado de “Situación actual” desde la izquierda; bloques porcentuales desde la derecha; tarjetas de perfiles con una entrada sutil.
+- [ ] Comprobar que las animaciones no se reinicien incorrectamente al renderizar, navegar o recuperar una sesión.
+- [ ] Mantener el comportamiento accesible para prefers-reduced-motion.
+
+### Verificación de Supabase
+
+Se inspeccionaron los proyectos remotos identificados en la sección 8:
+
+| Control | Staging | Producción |
+|---|---|---|
+| Estado del proyecto | ACTIVE_HEALTHY | ACTIVE_HEALTHY |
+| Migración más reciente registrada | 011_pausar_busquedas | 011_pausar_busquedas |
+| RLS en tablas públicas inspeccionadas | Activo | Activo |
+| Bucket avatars | Público, 2 MB, JPG/PNG/WEBP | Público, 2 MB, JPG/PNG/WEBP |
+| Bucket cvs | Privado, 5 MB, PDF | Privado, 5 MB, PDF |
+
+La estructura observada en producción incluye las tablas y columnas principales usadas por la versión actual. Las migraciones registradas en producción siguen su historial consolidado (000, 000b, 000c, 008, 010, 011); staging conserva su historial incremental. Ambos proyectos tienen registradas las migraciones funcionales hasta la 011.
+
+### Bloqueantes y advertencias que siguen abiertos
+
+1. **Asignación del rol empresa — bloqueante de seguridad/producto.** El flujo de registro envía rol dentro de user_metadata y el trigger de creación de perfil utiliza esos datos. Un usuario puede solicitar el rol de empresa desde el cliente. Antes de habilitar el registro público, definir y aplicar una asignación/verificación del rol desde un mecanismo confiable del servidor y revisar las políticas RLS que dependen de ese rol.
+2. **Configuración de Auth en producción — pendiente de comprobación operativa.** Confirmar Site URL y Redirect URLs exactas, confirmación de correo, plantillas en español y flujo de recuperación desde el dominio definitivo. La inspección de base de datos no acredita esta configuración del dashboard.
+3. **SMTP y entregabilidad — pendiente.** La documentación de producto indica que se utiliza el SMTP compartido de Supabase, con límites bajos. Verificar el proveedor, SPF, DKIM, DMARC, remitente y entrega real antes de abrir el registro al público.
+4. **Protección de contraseñas filtradas — advertencia activa.** El advisor de Supabase reporta deshabilitada la protección contra contraseñas comprometidas en ambos proyectos.
+5. **Funciones SECURITY DEFINER — revisar, no revocar a ciegas.** Los advisors detectan que borrar_busqueda, cupo_actual y postular son ejecutables por authenticated. El cliente necesita invocar las RPC correspondientes, por lo que hay que verificar sus comprobaciones internas de identidad/propiedad y sus permisos; no quitar EXECUTE sin revisar el flujo.
+6. **Rendimiento — mejoras recomendadas.** Los advisors señalan claves foráneas sin índices de cobertura, expresiones de Auth que se reevalúan en políticas RLS y políticas permisivas múltiples. No se detectó una falla funcional derivada de estos avisos, pero conviene corregirlos antes de escalar.
+7. **Copy y promesas públicas — pendiente de producto.** Resolver las discrepancias documentadas en la sección 13: cinco postulaciones por día versus cinco por semana, obligación de respuesta, perfiles “verificados” y fuentes/periodos de las estadísticas. No publicar promesas que el comportamiento actual no respalde.
+8. **SEO y recursos de publicación — pendiente.** Completar Search Console, imagen social definitiva, manifest corregido y URLs independientes para páginas legales, según la sección 12.
+
+### Decisión de publicación
+
+No abrir todavía el pull request de producción ni hacer merge. Primero resolver los bloqueantes de seguridad y configuración, corregir las animaciones, completar las pruebas manuales y validar el diff entre ambos repositorios. Una vez cumplidos esos puntos, volver a comparar test-empleos/main con MatchEmpleos/main y abrir el pull request para revisión; este documento debe actualizarse con los resultados de esa nueva validación.

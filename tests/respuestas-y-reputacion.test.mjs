@@ -70,7 +70,19 @@ test("matches, notificaciones y descartes no dependen de la memoria de la pesta�
   assert.match(html, /leerSet\("me-descartadas"\)/);
 });
 
-test("el ícono y el manifiesto apuntan a archivos que existen", () => {
-  assert.match(html, /<link rel="manifest" href="site\.webmanifest" \/>/);
-  assert.match(html, /<link rel="icon" href="img\/favicon\.ico" sizes="any" \/>/);
+test("el ícono y el manifiesto apuntan a sus rutas reales", () => {
+  assert.match(html, /<link rel="manifest" href="img\/site\.webmanifest" \/>/);
+  assert.match(html, /<link rel="icon" href="favicon\.ico" sizes="any" \/>/);
+});
+
+test("un vencimiento superado nunca se presenta como si venciera hoy", () => {
+  assert.match(html, /return diferencia <= 0 \? -1 : Math\.ceil\(diferencia \/ DIA_MS\)/);
+  assert.match(html, /return q < 0 \? "Plazo vencido"/);
+});
+
+test("la baja de cuenta se detiene si Storage no confirma la eliminación", () => {
+  assert.match(html, /Promise\.allSettled\(\[/);
+  assert.match(html, /r\.status === "rejected" \|\| r\.value\?\.error/);
+  assert.match(html, /if \(errorArchivos\)[\s\S]*?Tu cuenta sigue activa/);
+  assert.ok(html.indexOf("if (errorArchivos)") < html.indexOf("DB.eliminarCuenta()"));
 });

@@ -86,3 +86,15 @@ test("la baja de cuenta se detiene si Storage no confirma la eliminación", () =
   assert.match(html, /if \(errorArchivos\)[\s\S]*?Tu cuenta sigue activa/);
   assert.ok(html.indexOf("if (errorArchivos)") < html.indexOf("DB.eliminarCuenta()"));
 });
+
+
+test("la asistencia de IA está disponible en staging y producción", () => {
+  assert.doesNotMatch(html, /if \(ENTORNO !== ["']staging["']\) return ["']["'];/);
+  assert.match(html, /data-action="mejorar-sobre"/);
+  assert.match(html, /sb\.functions\.invoke\(["']mejorar-sobre["']/);
+});
+
+test("la landing comunica el cupo correcto de cinco postulaciones semanales", () => {
+  assert.match(html, /Tenés 5 postulaciones por semana\./);
+  assert.doesNotMatch(html, /Tenés 5 Postulaciones por día\./);
+});

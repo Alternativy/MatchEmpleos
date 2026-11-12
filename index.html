@@ -6323,6 +6323,7 @@ async function toggleBusqueda(id) {
             password,
             options: {
               data: { rol: kind, nombre, display_name: nombre, full_name: nombre, datos: perfilDatos() },
+              emailRedirectTo: location.origin + location.pathname,
             },
           });
           if (error) {

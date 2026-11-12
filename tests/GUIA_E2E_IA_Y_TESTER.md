@@ -6,9 +6,10 @@ Esta guía complementa las 18 pruebas estáticas de `real-user-offers.test.mjs`.
 
 1. Usar exclusivamente el sitio de pruebas (Deploy Preview o URL de staging) conectado al proyecto Supabase de staging `gtnxlkqumppeintdpycn`. No ejecutar estos casos contra `matchempleos.com.ar` ni contra producción.
 2. Confirmar que las Edge Functions necesarias estén desplegadas en staging y que sus secretos `GEMINI_API_KEY` y, si se quiere probar el fallback, `GROQ_API_KEY` estén configurados en Supabase → Edge Functions → Secrets.
-3. Crear cuentas de prueba separadas: una persona candidata y una empresa. Usar correos de testing controlados por el equipo. No reutilizar cuentas personales ni datos reales.
-4. Preparar textos sintéticos, sin datos personales. Registrar URL, navegador, fecha, usuario de prueba (sin contraseña), resultado esperado y evidencia.
-5. Limpiar o identificar los registros creados durante la prueba. No borrar datos históricos compartidos de staging.
+3. Para Deploy Preview, confirmar que el proyecto Supabase de testing permita el callback exacto del preview en Authentication → URL Configuration → Redirect URLs (se utiliza el origen actual como `emailRedirectTo`). No ampliar la allowlist a dominios ajenos al equipo.
+4. Crear cuentas de prueba separadas: una persona candidata y una empresa. Usar correos de testing controlados por el equipo. No reutilizar cuentas personales ni datos reales.
+5. Preparar textos sintéticos, sin datos personales. Registrar URL, navegador, fecha, usuario de prueba (sin contraseña), resultado esperado y evidencia.
+6. Limpiar o identificar los registros creados durante la prueba. No borrar datos históricos compartidos de staging.
 
 ## 2. E2E asistido por Gemini Argon
 
@@ -56,6 +57,7 @@ La Edge Function `sugerir-respuestas-chat` existe, pero la rama auditada no inte
 - [ ] Registrar una cuenta candidata de prueba y completar los pasos.
 - [ ] Registrar una cuenta empresa de prueba.
 - [ ] Cerrar sesión e iniciar sesión con ambas cuentas.
+- [ ] En registro candidato, adjuntar un PDF, confirmar el correo desde el mismo navegador y verificar que el CV se suba al perfil automáticamente. Comprobar también que un correo distinto no pueda recuperar el archivo temporal.
 - [ ] Verificar que cada rol llega a su panel correcto.
 - [ ] Intentar abrir una ruta privada sin sesión: debe redirigir o bloquear el acceso.
 - [ ] Probar credenciales incorrectas y recuperación de contraseña.

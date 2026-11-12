@@ -130,7 +130,7 @@ La app usa rutas por hash (`#/...`). No hay servidor de rutas.
 - **Estado de despliegue verificado el 12/11/2026:** en producción ambas funciones están activas y tienen `verify_jwt: false`. En staging, `mejorar-sobre` está activa con `verify_jwt: false` y `sugerir-respuestas-chat` figura con `verify_jwt: true`; mantener presente esa diferencia al probar o redeplegar.
 - La función `mejorar-sobre` valida el cuerpo y limita el texto a 4.000 caracteres. Tiene un límite temporal en memoria de 8 solicitudes por IP por minuto; es una protección básica y no reemplaza un rate limiter persistente para producción.
 - Los usuarios autenticados reservan cuota mediante RPC: 5 mejoras por día y 50 por mes. Los visitantes tienen una única mejora, identificada con UUID local y hash SHA-256 reservado en `private.anonymous_ai_usage`. La cuota se confirma como consumida solo cuando el proveedor devuelve una respuesta exitosa; si todos los proveedores fallan, se libera la reserva.
-- El frontend oculta la herramienta fuera de staging. En registro, la mejora se aplica solo si el usuario elige la propuesta; el texto original no se reemplaza automáticamente. El texto y la respuesta generada no se guardan como contenido en Supabase; solo se persiste la metadata necesaria para controlar las cuotas.
+- El frontend muestra la herramienta tanto en staging como en producción. En registro, la mejora se aplica solo si el usuario elige la propuesta; el texto original no se reemplaza automáticamente. El texto y la respuesta generada no se guardan como contenido en Supabase; solo se persiste la metadata necesaria para controlar las cuotas.
 - Para habilitar los proveedores en un entorno, configurar `GEMINI_API_KEY` y/o `GROQ_API_KEY` en **Edge Functions → Secrets** del proyecto correspondiente y desplegar las funciones. No configurar `OPENAI_API_KEY`: el modelo `openai/gpt-oss-120b` se consulta a través de la API de Groq.
 
 ---
@@ -414,7 +414,7 @@ Si sos un agente que trabaja en este repo, seguí estas reglas:
 
 - [ ] **UX/UI del login:** revisar jerarquía visual, espaciados, responsive, estados de carga, validaciones, mensajes de error y accesibilidad. El flujo funcional está implementado, pero su experiencia visual todavía requiere una pasada específica.
 - [ ] **Login end-to-end:** probar en staging con cuentas reales de candidato y empresa, incluyendo contraseña incorrecta, correo sin confirmar, sesión persistente al refrescar, recuperación de contraseña, cierre de sesión y redirección según rol. La revisión de código no reemplaza esta prueba.
-- [ ] **Funcionalidad de IA:** primero reintegrar el frontend con `mejorar-sobre` y los mecanismos de cuota; el `index.html` actual no invoca la función. Después probar proveedores, errores/timeout, cuotas y estado anónimo en staging.
+- [ ] **Funcionalidad de IA:** el frontend ya invoca `mejorar-sobre` en staging y producción. Antes de publicar, probar en ambos entornos proveedores, errores/timeout, cuotas y uso anónimo; verificar que `GEMINI_API_KEY` y/o `GROQ_API_KEY` estén configuradas en producción.
 - [ ] **UX/UI de la asistencia IA:** revisar claridad del botón, presentación de la propuesta, comparación con el original, aplicación/rechazo y mensajes de cuota o indisponibilidad.
 
 
@@ -448,7 +448,7 @@ Referencia visual: archivo **`Match Empleos Landing (copia).pdf`** entregado por
 
 ### Discrepancias y validaciones pendientes con diseño / producto
 
-1. **Cupo de postulaciones (bloqueante de contenido):** el PDF indica “Tenés 5 postulaciones por día”. La lógica documentada en la sección 8 renueva el cupo de 5 postulaciones los lunes a las 00:00 de Buenos Aires, es decir, semanalmente. Confirmar si el diseño debe decir “por semana” o si producto quiere modificar la regla del sistema. No se cambió la lógica.
+1. **Cupo de postulaciones:** producto confirmó cinco postulaciones por semana. La lógica del servidor renueva el cupo los lunes a las 00:00 de Buenos Aires; la landing debe comunicar “5 postulaciones por semana”.
 2. **Obligación de respuesta:** el PDF afirma que la empresa “está obligada a responderte”. La aplicación calcula y muestra una tasa de respuesta, pero no se identificó una regla técnica que obligue a responder dentro de un plazo ni una consecuencia por no hacerlo. Producto debe confirmar si es una promesa/compromiso operativo o si debe reformularse el texto.
 3. **Perfiles verificados:** las tarjetas hablan de perfiles “verificados”. La documentación actual registra perfiles y roles, pero también señala que la asignación del rol empresa todavía puede iniciarse desde metadata del registro. Confirmar qué significa “verificado” y qué proceso lo respalda antes de presentar esa afirmación como una verificación efectiva.
 4. **Estadísticas:** se conservaron los valores del diseño: 16,5%, 43%, 45% y 0,17%, además de los textos asociados. Falta confirmar fuente, período, universo y redacción exacta de cada indicador. En particular, validar la relación “1.500 inserciones sobre 900.000 beneficiarios” y el dato de ghosting de generación Z.
@@ -533,7 +533,7 @@ La estructura observada en producción incluye las tablas y columnas principales
 4. **Protección de contraseñas filtradas — advertencia activa.** El advisor de Supabase reporta deshabilitada la protección contra contraseñas comprometidas en ambos proyectos.
 5. **Funciones SECURITY DEFINER — revisar, no revocar a ciegas.** Los advisors detectan que borrar_busqueda, cupo_actual y postular son ejecutables por authenticated. El cliente necesita invocar las RPC correspondientes, por lo que hay que verificar sus comprobaciones internas de identidad/propiedad y sus permisos; no quitar EXECUTE sin revisar el flujo.
 6. **Rendimiento — mejoras recomendadas.** Los advisors señalan claves foráneas sin índices de cobertura, expresiones de Auth que se reevalúan en políticas RLS y políticas permisivas múltiples. No se detectó una falla funcional derivada de estos avisos, pero conviene corregirlos antes de escalar.
-7. **Copy y promesas públicas — pendiente de producto.** Resolver las discrepancias documentadas en la sección 13: cinco postulaciones por día versus cinco por semana, obligación de respuesta, perfiles “verificados” y fuentes/periodos de las estadísticas. No publicar promesas que el comportamiento actual no respalde.
+7. **Copy y promesas públicas — pendiente parcial.** El cupo quedó definido en cinco postulaciones por semana. Siguen pendientes la obligación de respuesta, el alcance de “perfiles verificados” y las fuentes/períodos de las estadísticas. No publicar promesas que el comportamiento actual no respalde.
 8. **SEO y recursos de publicación — pendiente.** Completar Search Console, imagen social definitiva, manifest corregido y URLs independientes para páginas legales, según la sección 12.
 
 ### Decisión de publicación
@@ -545,7 +545,7 @@ No abrir todavía el pull request de producción ni hacer merge. Primero resolve
 - Login: inspección estática de `login()`, `iniciarSesionForm()`, `setSesion()` y `route()`. Se verificó validación de correo/contraseña, llamada a Supabase Auth, consulta de `perfiles`, protección de rutas privadas y redirección por rol. Los scripts JavaScript ejecutables del HTML pasaron el chequeo de sintaxis. No se probó una sesión real porque esta revisión no contó con credenciales de prueba ni ejecución del sitio en navegador.
 - Manejo de errores del login: `iniciarSesionForm()` distingue credenciales incorrectas y correo sin confirmar y restablece el botón en `finally`. En el código actual no hay `catch` para excepciones inesperadas de red; agregarlo y probarlo es pendiente.
 - UX/UI del login: pendiente una revisión específica de diseño responsive, jerarquía, accesibilidad, textos y estados de error/carga.
-- IA: la Edge Function implementa Gemini con fallback a Groq, reservas de cuota para usuarios registrados y visitantes, y confirma el consumo solo ante respuesta exitosa. Falta validar el comportamiento operativo con las claves/modelos desplegados en staging y completar pruebas de todos los caminos de error y cuota.
+- IA: la Edge Function `mejorar-sobre` está activa en producción y staging. El frontend quedó habilitado en ambos entornos. Producción tiene las RPC y tablas de cuotas; falta una prueba funcional real desde el dominio productivo y confirmar que al menos una clave de proveedor (`GEMINI_API_KEY` o `GROQ_API_KEY`) esté configurada y operativa. Las cuotas de IA son independientes del cupo de postulaciones.
 - UX/UI de IA: pendiente mejorar el flujo de propuesta, comparación, aplicación y mensajes de disponibilidad/límite.
 
 

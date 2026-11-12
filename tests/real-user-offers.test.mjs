@@ -55,7 +55,7 @@ test("el frontend no conserva accesos ni perfiles de demostración", () => {
 
 test("las rutas privadas exigen una sesión de Supabase", () => {
   assert.match(html, /if \(!ME\.id && a && !PUBLICAS\.includes\(a\)\)/);
-  assert.match(html, /sb\.auth\.getSession\(\)/);
+  assert.match(html, /sb\.auth\.onAuthStateChange\(/);
   assert.doesNotMatch(html, /DEMO_VISIBLE|DEMO_HABILITADO|ME\.demo/);
 });
 
@@ -74,7 +74,7 @@ test("generar una propuesta no reemplaza el original hasta la acción explícita
   assert.match(generation, /sb\.functions\.invoke\("mejorar-sobre"/);
   assert.match(generation, /output\.value = data\.improvedText/);
   assert.match(generation, /output\.dataset\.source = texto/);
-  assert.match(generation, /El texto original sigue intacto/);
+  assert.match(generation, /Tu texto original sigue intacto/);
   assert.doesNotMatch(generation, /input\.value\s*=\s*data\.improvedText/);
   assert.match(html, /if \(act === "usar-sobre-ia"\)/);
   assert.match(html, /original\.value = suggestion\.value\.trim\(\)/);
@@ -94,13 +94,9 @@ test("el frontend no contiene claves secretas de proveedores o de Supabase", () 
   assert.doesNotMatch(html, /GEMINI_API_KEY|GROQ_API_KEY|SUPABASE_SECRET_KEYS|SUPABASE_SERVICE_ROLE_KEY|sk-[A-Za-z0-9_-]{20,}/);
 });
 
-test("el módulo de sugerencias de chat solo aparece para empresas", () => {
-  assert.match(html, /const aiModule = kind === "e"/);
-  assert.match(html, /Generar 3 respuestas/);
-  assert.match(html, /data-action="generar-respuestas-chat"/);
-  assert.match(html, /data-action="usar-respuesta-chat"/);
-  assert.match(html, /sb\.functions\.invoke\("sugerir-respuestas-chat"/);
-  assert.match(html, /body: \{ chatId \}/);
+test("la interfaz actual no presenta la asistencia IA de chat como integrada", () => {
+  assert.doesNotMatch(html, /sugerir-respuestas-chat|generar-respuestas-chat|aiSuggestions/);
+  assert.match(chatAI, /Deno\.serve/);
 });
 
 test("la Edge Function de chat exige sesión y valida que la empresa sea dueña del chat", () => {
@@ -173,7 +169,7 @@ test("la verificación pública es de solo lectura y se sincroniza desde revisio
   assert.match(reportSql, /alter table private\.empresa_verificacion_revisiones enable row level security/i);
   assert.match(reportSql, /after insert or update of estado, revisado_at/i);
   assert.match(html, /empresas_verificadas/);
-  assert.match(html, /company-verified/);
+  assert.match(html, /verified-mark/);
 });
 
 test("el uso anónimo de IA queda en tabla privada con RLS y RPC exclusivas de service_role", () => {

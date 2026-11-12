@@ -232,6 +232,10 @@ Diferencias intencionales entre staging y producción (ver migración `009`):
 - `004` a `009` son para staging. Su efecto ya está incluido en `000`.
 - Todo cambio futuro va en un archivo nuevo, numerado a partir de `012`. Las `010` y `011` ya están aplicadas en staging y en producción. No cambiar tablas a mano en el editor de Supabase.
 
+- Los scripts de `supabase/sql/` son SQL de referencia/ejecución manual: **un merge de GitHub no los aplica en Supabase**. Revisar siempre el proyecto destino antes de ejecutarlos.
+- `denuncias_y_verificacion_empresas.sql` quedó alineado con el estado verificado en **producción** el 12/11/2026: la política de INSERT llama a `private.puede_denunciar_empresa()`, que encapsula la validación de pertenencia y evita la recursión RLS. Staging todavía conserva una política anterior que consulta las tablas directamente; no asumir que ambos entornos tienen la misma definición.
+- `anonymous_sobre_ai_single_use.sql` incluye RLS en `private.anonymous_ai_usage` y limita las RPC de reserva/cierre a `service_role`. En producción RLS ya está activo; en staging se observó desactivado al auditarlo, por lo que ese script también documenta la corrección necesaria allí.
+
 ### Tablas
 
 | Tabla | Contenido | Clave / relaciones |

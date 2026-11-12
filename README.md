@@ -688,3 +688,13 @@ Los siguientes puntos son importantes: existen commits o archivos de backend/SQL
 - Commits frontend: `d93b8f696213987c579eb3a11908d82e89c55539` (consulta y badge inicial) y `a5b4b5c383d4403967a1ade00824e67df134145f` (badge en match y chats).
 - Validación realizada: relectura de `index.html` desde `main` y comprobación estática de la consulta de IDs verificados, el booleano derivado y los puntos de renderizado. No se ejecutó prueba visual/E2E con una empresa verificada real.
 - Pendiente: definir el mecanismo seguro para autenticar a los miembros del equipo Match Empleos; auditar políticas y privilegios efectivos; probar en staging la lectura de una empresa verificada y otra no verificada; completar aprobación/rechazo/revocación manual y verificar que una empresa no pueda auto-verificarse ni alterar su estado mediante REST.
+
+
+## 24. Corrección de entorno de Deploy Preview y recuperación del CV de registro (12 de noviembre de 2026)
+
+- La selección de Supabase mantiene producción exclusivamente para los hosts exactos `matchempleos.com.ar` y `www.matchempleos.com.ar`. Los hosts `*.netlify.app`, incluido Deploy Preview, se fuerzan explícitamente a staging.
+- El log de inicio informa hostname y entorno seleccionado; no imprime tokens ni claves.
+- El registro define `emailRedirectTo` con el origen actual para que el enlace de confirmación vuelva al mismo Deploy Preview/staging desde el que se inició el alta. El dominio de preview debe estar permitido en Redirect URLs del proyecto Supabase de testing; esta rama no modifica configuración de Supabase.
+- Si el candidato adjunta un PDF al registrarse y Supabase requiere confirmar el correo, el archivo se conserva temporalmente en IndexedDB del mismo navegador, asociado al correo y con vencimiento de siete días. Al completar el inicio de sesión tras la confirmación, se valida que el correo coincida, se sube al bucket privado `cvs` y se elimina el archivo temporal solo después de confirmar el guardado.
+- Si el archivo no puede conservarse, se informa antes de crear la cuenta. Si la subida posterior falla, el archivo temporal se mantiene para un nuevo intento. No se almacena el CV en `localStorage` ni se envía a un servicio externo.
+- No se modificaron tablas, políticas, buckets, funciones ni claves de Supabase. La prueba automatizada cubre los contratos estáticos de selección de entorno, redirección de confirmación y recuperación del CV; no reemplaza un E2E real.

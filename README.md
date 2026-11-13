@@ -740,3 +740,17 @@ Los siguientes puntos son importantes: existen commits o archivos de backend/SQL
 - [ ] Agregar pruebas parametrizadas para cero, una, varias y todas las opciones, desmarcado total, registro, edición, recarga, nueva sesión y matching.
 - [ ] Probar el flujo completo en staging con cuentas reales de postulante y empresa; no ejecutar pruebas destructivas sobre producción.
 
+## 25. Error de permisos en `public.postulaciones` en producción (13 de noviembre de 2026)
+
+- En los logs del proyecto Supabase de producción (`mijmzywmrazzaqypuwhu`) se observaron errores PostgreSQL `42501` con el mensaje `permission denied for table postulaciones`. Los eventos compartidos aparecieron repetidamente, aproximadamente cada 3–5 segundos.
+- El error indica que una operación intentó acceder a `public.postulaciones` sin contar con los privilegios SQL necesarios para esa operación. Por sí solo, el código `42501` no identifica qué consulta o función la originó ni demuestra si se trató de SELECT, INSERT, UPDATE o DELETE.
+- En una revisión anterior se comunicó que el rol `authenticated` tenía SELECT pero no INSERT, UPDATE ni DELETE, y que solo existían dos políticas RLS de lectura. **Esa conclusión no quedó respaldada por resultados de inspección SQL legibles y verificables; debe considerarse no confirmada y no utilizarse como diagnóstico definitivo.** La inspección debe repetirse con consultas de solo lectura que devuelvan explícitamente los privilegios efectivos, el estado de RLS y las políticas vigentes.
+- Es importante distinguir `public.postulaciones` de `public.busquedas`: las empresas publican ofertas en `busquedas`; los candidatos crean postulaciones a esas ofertas. Este error no demuestra, por sí mismo, que la publicación de búsquedas por parte de una empresa esté afectada.
+- La frecuencia de los eventos podría corresponder a una consulta o reintento automático del frontend, una función o un proceso backend. Todavía no se identificó el origen exacto ni el punto del código que ejecuta la operación.
+- **No se modificaron GRANT, políticas RLS, funciones, tablas ni datos de producción** como parte de esta revisión. No se deben conceder permisos de escritura de forma general sin identificar primero la operación y definir las reglas de negocio.
+- Próximos pasos de diagnóstico:
+  - [ ] Consultar por separado los privilegios efectivos de `anon` y `authenticated` sobre `public.postulaciones` (SELECT, INSERT, UPDATE y DELETE).
+  - [ ] Inspeccionar `relrowsecurity`, `relforcerowsecurity` y todas las políticas RLS de `public.postulaciones`, incluyendo roles, comandos y expresiones `USING`/`WITH CHECK`.
+  - [ ] Identificar en el frontend, RPCs, triggers o Edge Functions qué operación genera el error y por qué se repite.
+  - [ ] Definir quién puede crear una postulación, quién puede cambiar su estado y si existe algún caso legítimo de eliminación.
+  - [ ] Solo después, proponer los GRANT mínimos y las políticas RLS correspondientes; aplicar cambios en staging y probarlos antes de producción.

@@ -688,3 +688,55 @@ Los siguientes puntos son importantes: existen commits o archivos de backend/SQL
 - Commits frontend: `d93b8f696213987c579eb3a11908d82e89c55539` (consulta y badge inicial) y `a5b4b5c383d4403967a1ade00824e67df134145f` (badge en match y chats).
 - Validación realizada: relectura de `index.html` desde `main` y comprobación estática de la consulta de IDs verificados, el booleano derivado y los puntos de renderizado. No se ejecutó prueba visual/E2E con una empresa verificada real.
 - Pendiente: definir el mecanismo seguro para autenticar a los miembros del equipo Match Empleos; auditar políticas y privilegios efectivos; probar en staging la lectura de una empresa verificada y otra no verificada; completar aprobación/rechazo/revocación manual y verificar que una empresa no pueda auto-verificarse ni alterar su estado mediante REST.
+
+
+## 24. Carga de perfiles, campos multi-select y criterios de matching (13 de noviembre de 2026)
+
+### Persistencia y estructura SQL
+
+- El perfil de cada usuario se almacena en `public.perfiles`. Los campos variables del registro se guardan dentro de `perfiles.datos` (`jsonb`, default `{}`), con dos niveles usados por el frontend: `campos` para valores textuales y `chips` para selecciones múltiples.
+- Las búsquedas de empresa guardan `jornada` y `turno` en columnas `text[]`, ambas `NOT NULL DEFAULT '{}'`.
+- En staging y producción se verificó que las columnas y defaults relevantes de `perfiles` y `busquedas` coinciden. El JSONB interno y los arrays no tienen constraints SQL que validen las claves, los valores permitidos, la cardinalidad o la consistencia entre preferencias de perfil y búsqueda.
+- El trigger `on_auth_user_created` ejecuta `handle_new_user()` y crea el perfil a partir de `raw_user_meta_data`. En staging la función valida explícitamente que el rol sea `c` o `e`; en producción esa validación explícita no está en la función, pero el CHECK de `perfiles.rol` restringe los valores admitidos.
+- Los permisos de columnas revisados permiten al usuario autenticado actualizar `nombre`, `datos` y `avatar_url`, pero no `rol`, cupo ni métricas del perfil. No se detectó que el cliente pueda cambiar su propio rol mediante el UPDATE ordinario de `perfiles`.
+
+### Comportamiento de los multi-select
+
+- `perfilDatos()` agrupa los textos no vacíos en `campos` y las selecciones de `S.reg.chips` en arrays dentro de `chips`. Ejemplo:
+  ```json
+  {
+    "campos": {"rc-ubi": "Burzaco", "rc-puesto": "Atención al público"},
+    "chips": {
+      "tipo": ["Full Time"],
+      "modo": ["Presencial"],
+      "hora": ["Mañana", "Tarde"]
+    }
+  }
+  ```
+- Los chips no son obligatorios. Pueden quedar sin selección. En el perfil de postulante, `rubros` permite hasta 3 opciones; `tipo`, `modo` y `hora` no tienen límite adicional en frontend. En el perfil de empresa, `sector`, `etipo`, `eexp`, `emodo` y `ehora` tampoco tienen límite adicional en frontend.
+- Durante el registro, `regDraft` y `S.reg.chips` viven en memoria. La navegación interna conserva los valores, pero refrescar la página durante el proceso puede perderlos. No se encontró persistencia local del borrador.
+- En edición, el frontend recupera `ME.datos.chips` y vuelve a guardar las selecciones. Una clave puede estar ausente o contener un array vacío; la interfaz trata ambos casos como ninguna selección.
+- La primera búsqueda automática de una empresa, creada por `asegurarBusquedaEmpresa()`, transfiere el puesto y la descripción, pero no copia las preferencias `ehora`, `etipo`, `eexp` ni `emodo` del perfil a `busquedas.jornada` y `busquedas.turno`. Esas preferencias del perfil no afectan por sí solas los criterios de la búsqueda inicial.
+
+### Matching actual y decisión pendiente
+
+- `puntajeMatch()` compara `busquedas.jornada` con `postulante.datos.chips.tipo` y `busquedas.turno` con `postulante.datos.chips.hora`. También utiliza términos del puesto, descripción, rubros, experiencia y texto del perfil en el análisis textual.
+- El cálculo estructurado de listas mide la intersección del candidato sobre la cantidad de opciones elegidas por la empresa. Por ejemplo, si la empresa selecciona tres turnos y el postulante coincide con uno, ese criterio aporta un tercio; con dos, dos tercios; con los tres, el total. Si la empresa no especifica turnos, el criterio se excluye.
+- **Decisión de producto pendiente:** confirmar si las opciones múltiples de jornada y turno de la empresa representan alternativas aceptables (OR: cualquiera de las opciones sirve) o requisitos acumulativos (AND: se espera coincidencia con todas). El cálculo actual se comporta como acumulativo y puede penalizar a una persona que sí cumple una de las alternativas ofrecidas. No cambiar esta semántica sin definirla primero.
+- Los chips `modo`, `sector`, `etipo`, `eexp`, `emodo` y `ehora` no participan como comparaciones estructuradas directas en el puntaje actual. En particular, `ehora` del perfil de empresa no se convierte en `busquedas.turno`.
+
+### Guardado de edición y cobertura de pruebas
+
+- Se detectó que `guardarEdicionPerfil()` no comprueba correctamente el resultado de `DB.guardarDatosPerfil()` y puede mostrar un toast de éxito aunque Supabase haya devuelto un error. La persistencia debe comunicar explícitamente éxito/error; no debe usarse `data === null` como criterio único, porque un UPDATE exitoso sin SELECT también puede devolver datos nulos.
+- Los tests existentes revisan contratos estáticos del registro, autenticación y carga de ofertas, pero no cubren el ciclo completo de valores multi-select. No se encontraron pruebas para cero, una, varias y todas las opciones; desmarcar todo; guardar y recuperar tras logout/login; editar y volver a cargar; ni transferencia de preferencias del perfil de empresa a la primera búsqueda.
+- El análisis incluyó inspección del frontend, los tests disponibles y lectura de esquema/funciones/permisos en staging y producción. **No se modificó código, esquema, políticas ni datos de Supabase en esta revisión.** Los hallazgos son diagnóstico, no una corrección implementada ni una prueba E2E.
+
+### Trabajo recomendado antes de dar el flujo por validado
+
+- [ ] Definir formalmente la semántica OR/AND de las selecciones múltiples de jornada y turno en una búsqueda.
+- [ ] Normalizar el guardado de chips para representar consistentemente ninguna selección como array vacío, sin romper compatibilidad con perfiles existentes.
+- [ ] Corregir el falso mensaje de éxito de `guardarEdicionPerfil()` y propagar errores reales de persistencia.
+- [ ] Resolver cómo las preferencias de empresa deben inicializar `jornada` y `turno` en la primera búsqueda, si corresponde según la definición del producto.
+- [ ] Agregar pruebas parametrizadas para cero, una, varias y todas las opciones, desmarcado total, registro, edición, recarga, nueva sesión y matching.
+- [ ] Probar el flujo completo en staging con cuentas reales de postulante y empresa; no ejecutar pruebas destructivas sobre producción.
+

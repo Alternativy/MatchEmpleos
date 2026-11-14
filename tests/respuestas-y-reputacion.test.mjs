@@ -98,3 +98,10 @@ test("la landing comunica el cupo correcto de cinco postulaciones semanales", ()
   assert.match(html, /Tenés 5 postulaciones por semana\./);
   assert.doesNotMatch(html, /Tenés 5 Postulaciones por día\./);
 });
+
+test("abrir una conversación marca los mensajes entrantes como leídos antes de calcular el contador", () => {
+  assert.match(html, /function markChatRead\(chatKey, messages = \[\], rerender = true\)/);
+  assert.match(html, /if \(id && chats\[id\]\) markChatRead\(chats\[id\]\.key, chats\[id\]\.msgs, false\)/);
+  assert.match(html, /if \(rerender\) render\(true\)/);
+  assert.doesNotMatch(html, /case "chat":[\s\S]{0,130}markChatRead/);
+});

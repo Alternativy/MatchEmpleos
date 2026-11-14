@@ -3989,7 +3989,7 @@
           try { localStorage.setItem("me-chat-read:" + ME.id, JSON.stringify(markers)); }
           catch (err) { console.warn("[chat] No se pudo guardar el estado de lectura", err); }
         }
-        function markChatRead(chatKey, messages = []) {
+        function markChatRead(chatKey, messages = [], rerender = true) {
           if (!ME.id || !chatKey) return;
           const maxId = messages.reduce((n, m) => Math.max(n, Number(m.dbId || m.id) || 0), 0);
           const markers = readMarkers();
@@ -3998,7 +3998,7 @@
           if (unreadMessages[chatKey]) {
             delete unreadMessages[chatKey];
             delete unreadMessageIds[chatKey];
-            render(true);
+            if (rerender) render(true);
           }
         }
         function calculateUnread(d) {
@@ -4524,9 +4524,12 @@
   <form class="composer" data-form="chat" data-kind="${kind}" data-id="${id}"><label class="vh" for="msg-${kind}">Mensaje</label><input id="msg-${kind}" placeholder="Escribí un mensaje" autocomplete="off"><button class="btn pri sm" type="submit">Enviar</button></form>`;
         }
         function mensajes(kind, id) {
-          const items = convItems(kind, id);
           const active = kind === "e" ? "#/e/mensajes" : "#/c/mensajes";
           const chats = kind === "e" ? S.e.chats : S.c.chats;
+          // Al renderizar una conversación ya cargada, registrar su último mensaje como leído.
+          // Se evita un segundo render porque el contador se calcula más abajo en shell().
+          if (id && chats[id]) markChatRead(chats[id].key, chats[id].msgs, false);
+          const items = convItems(kind, id);
           const n = Object.keys(chats).length;
           const sub = kind === "e" ? "Conversaciones abiertas" : "Lo que te respondieron las empresas";
           const head = `<div class="hdr"><h1 style="font-size:18px;font-weight:600">Mensajes</h1><span class="side">${n} conversaci${n === 1 ? "ón" : "ones"}</span></div><p class="sec-lbl">${sub}</p>`;
@@ -5230,7 +5233,6 @@ async function toggleBusqueda(id) {
               case "mensajes":
                 return mensajes("c");
               case "chat":
-                if (S.c.chats[c]) markChatRead(S.c.chats[c].key, S.c.chats[c].msgs);
                 return mensajes("c", c);
               case "notificaciones":
                 return notifs("c");
@@ -5266,7 +5268,6 @@ async function toggleBusqueda(id) {
               case "mensajes":
                 return mensajes("e");
               case "chat":
-                if (S.e.chats[c]) markChatRead(S.e.chats[c].key, S.e.chats[c].msgs);
                 return mensajes("e", c);
               case "notificaciones":
                 return notifs("e");

@@ -754,3 +754,21 @@ Los siguientes puntos son importantes: existen commits o archivos de backend/SQL
   - [ ] Identificar en el frontend, RPCs, triggers o Edge Functions qué operación genera el error y por qué se repite.
   - [ ] Definir quién puede crear una postulación, quién puede cambiar su estado y si existe algún caso legítimo de eliminación.
   - [ ] Solo después, proponer los GRANT mínimos y las políticas RLS correspondientes; aplicar cambios en staging y probarlos antes de producción.
+
+## 26. Consumo de Logs Query en Supabase (13 de noviembre de 2026)
+
+- En el panel de Usage de la organización Match Empleos se observó un consumo de **103,3 GB sobre un allowance de 100 GB** de Logs Query: 3,3 GB (3,3 %) por encima del umbral mostrado.
+- **Logs Query no es almacenamiento de la base de datos ni volumen de correos, y actualmente no genera un cargo directo por excedente.** Mide el volumen de logs escaneado al consultarlos desde Supabase Studio, API, CLI u otras integraciones. No debe confundirse con Logs Ingest, que mide el volumen de logs generado/recibido.
+- Según la documentación de Supabase consultada el 13/11/2026, el enforcement de los límites de Logs Query figura como **“Not yet enforced”**. Por lo tanto, el valor de 103,3 GB no implica por sí mismo un cobro, pérdida de datos ni una restricción inmediata del servicio. Las posibles limitaciones futuras descritas por Supabase no deben tratarse como activas hasta que la plataforma anuncie el enforcement.
+- Supabase también comunicó que existen problemas conocidos de medición que pueden inflar el consumo reportado. No se puede determinar qué proporción del valor observado corresponde a medición incorrecta.
+- El allowance de 100 GB corresponde al plan Free de la organización. La cifra no significa que la base de datos tenga 100 GB ocupados ni que se hayan almacenado 103,3 GB de logs.
+- Las consultas repetidas y las ventanas amplias pueden incrementar el volumen escaneado: una consulta de siete días puede escanear aproximadamente siete veces más que una de un día, y repetir una consulta vuelve a escanear los datos. Durante la depuración de autenticación y SMTP se realizaron varias consultas de logs; pudieron contribuir al consumo, pero no hay evidencia para atribuirles todo el excedente ni calcular su proporción.
+- **No se desactivaron logs, no se cambiaron planes y no se modificó la base de datos** por este indicador. No se requiere una migración SQL ni un cambio de frontend para corregirlo.
+- Recomendaciones operativas:
+  - [ ] Evitar consultas repetidas o polling de Logs Explorer.
+  - [ ] Usar ventanas temporales acotadas y filtros por servicio, endpoint, estado y entorno desde el inicio de la consulta.
+  - [ ] Seleccionar explícitamente el proyecto de staging o producción antes de consultar logs.
+  - [ ] Revisar Logs Ingest por separado; no inferir su consumo a partir de Logs Query.
+  - [ ] Mantener los logs de Auth y Postgres habilitados, porque son necesarios para diagnosticar problemas de registro, acceso y permisos.
+  - [ ] Si se necesita una investigación adicional, hacer consultas puntuales y de solo lectura, evitando barridos amplios del historial.
+

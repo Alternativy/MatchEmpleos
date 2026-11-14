@@ -4699,8 +4699,8 @@
         function cvReadForm() {
           const val = (id) => (document.getElementById(id)?.value || "").trim();
           const lines = (id) => cvList(val(id));
-          const expLines = lines("cv-experience");
-          const eduLines = lines("cv-education");
+          const expLines = val("cv-experience").split(/\n/).map((x) => x.trim()).filter(Boolean);
+          const eduLines = val("cv-education").split(/\n/).map((x) => x.trim()).filter(Boolean);
           const prev = CV_DRAFT || cvSeed();
           const experience = expLines.map((line) => {
             const parts = line.split("·").map((x) => x.trim());
@@ -4746,7 +4746,7 @@
               portfolio: profile.personal.portfolio,
               targetRole: profile.target_role,
               professionalSummary: profile.professional_summary,
-              experience: profile.experience.map((x) => ({ role: x.role, company: x.company, location: x.location, dates: x.dates, description: (x.bullets || []).join("\\n"), achievements: x.bullets || [] })),
+              experience: profile.experience.map((x) => ({ role: x.role, company: x.company, location: x.location, dates: x.dates, description: (x.bullets || []).join("\n"), achievements: x.bullets || [] })),
               education: profile.education.map((x) => ({ institution: x.institution, degree: x.degree, location: x.location, dates: x.dates, details: x.details })),
               skills: profile.skills,
               languages: profile.languages,
@@ -4879,6 +4879,7 @@ function cPerfil() {
   ${filas.map(([k, v]) => `<div class="rowline"><span>${k}</span><span class="v">${fmt(v)}</span></div>`).join("")}
   ${campos["rc-sobre"] ? `<p class="t-sec">Sobre mí</p><p style="color:var(--t2);line-height:1.6">${esc(campos["rc-sobre"])}</p>` : ""}
   <div class="rowline"><span>Currículum (PDF)</span><span class="v">${ME.datos?.cv ? esc(ME.datos.cv.nombre) : '<span style="color:var(--t3)">Sin cargar</span>'}</span></div><div class="stack" style="margin-top:12px">${ME.datos?.cv ? `<button class="btn out sm" data-action="ver-cv" data-cv="${esc(ME.datos.cv.path)}">Ver mi CV</button>` : ""}<label class="btn out sm" for="cv-up" style="cursor:pointer">${ME.datos?.cv ? "Reemplazar CV" : "Subir CV"}</label><input id="cv-up" type="file" accept=".pdf,application/pdf" hidden></div>
+  <button class="btn pri sm" style="margin-top:12px" data-go="#/c/cv">Generar CV con IA</button>
   <button class="btn out sm" style="margin-top:22px" data-action="editar-perfil">Editar mis datos</button></div>`;
           return shell("c", "#/c/perfil", inner);
         }

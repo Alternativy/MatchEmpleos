@@ -4228,7 +4228,7 @@
   <p class="t-note">Ingresá el email asociado a tu cuenta y te enviaremos instrucciones para crear una nueva contraseña.</p>
   <form data-form="recuperar" class="stack" style="margin-top:56px">
     <label class="vh" for="rc-mail">Correo</label><input class="field" id="rc-mail" type="email" placeholder="ejemplo@correo.com" required>
-    <p class="t-note" style="margin-top:44px">Te enviamos un enlace para recuperar tu contraseña a tu dirección de email.<br>Si no encontrás el correo, revisá también la carpeta de spam o correo no deseado.</p>
+    <p class="t-note" id="rc-hint" role="status" aria-live="polite" style="margin-top:28px">Después de enviar la solicitud, te indicaremos si fue aceptada. Revisá también spam o correo no deseado.</p>
     <button class="btn pri" type="submit" style="margin-top:28px">Enviar</button>
   </form>`);
         }
@@ -6265,8 +6265,8 @@ async function toggleBusqueda(id) {
           if (!EMAIL_RE.test(mail.value.trim())) {
             msg = "Escribí un correo con formato válido, por ejemplo nombre@correo.com.";
             campo = mail;
-          } else if (pass.value.length < 8) {
-            msg = "La contraseña tiene que tener al menos 8 caracteres.";
+          } else if (!pass.value) {
+            msg = "Ingresá tu contraseña.";
             campo = pass;
           }
           hint.textContent = msg;
@@ -6496,14 +6496,43 @@ async function toggleBusqueda(id) {
           }
         }
         async function recuperarForm() {
-          const email = (document.getElementById("rc-mail").value || "").trim();
+          const mail = document.getElementById("rc-mail");
+          const hint = document.getElementById("rc-hint");
+          const btn = document.querySelector('[data-form="recuperar"] button[type="submit"]');
+          const email = (mail?.value || "").trim();
           if (!EMAIL_RE.test(email)) {
-            toast("Escribí un correo con formato válido.");
+            if (hint) hint.textContent = "Escribí un correo con formato válido.";
+            mail?.focus();
             return;
           }
-          await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-          toast("Si el correo existe, te enviamos el enlace.");
-          go("#/login");
+          if (btn) {
+            btn.disabled = true;
+            btn.classList.add("cargando");
+            btn.setAttribute("aria-busy", "true");
+          }
+          if (hint) hint.textContent = "Enviando solicitud…";
+          try {
+            const { error } = await sb.auth.resetPasswordForEmail(email, {
+              redirectTo: location.origin + location.pathname,
+            });
+            if (error) {
+              console.warn("[auth] No se pudo solicitar la recuperación:", error.message);
+              if (hint) hint.textContent = "No pudimos procesar la solicitud. Revisá tu conexión e intentá nuevamente en unos minutos.";
+              return;
+            }
+            if (hint)
+              hint.textContent =
+                "La solicitud fue aceptada. Si existe una cuenta con ese correo, debería llegarle un enlace. Revisá spam o correo no deseado.";
+          } catch (err) {
+            console.error("[auth] Error al solicitar recuperación:", err);
+            if (hint) hint.textContent = "No pudimos procesar la solicitud por un problema de conexión. Intentá nuevamente.";
+          } finally {
+            if (btn?.isConnected) {
+              btn.disabled = false;
+              btn.classList.remove("cargando");
+              btn.removeAttribute("aria-busy");
+            }
+          }
         }
         async function nuevaClaveForm() {
           const password = document.getElementById("nc-pass").value || "";

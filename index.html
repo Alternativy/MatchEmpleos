@@ -4737,7 +4737,24 @@
           button.textContent = "Generando…";
           if (status) status.textContent = "La IA está organizando y redactando la información. Esto puede tardar unos segundos.";
           try {
-            const { data, error } = await sb.functions.invoke("generar-cv", { body: { profile } });
+            const apiProfile = {
+              name: profile.personal.name,
+              email: profile.personal.email,
+              phone: profile.personal.phone,
+              location: profile.personal.location,
+              linkedin: profile.personal.linkedin,
+              portfolio: profile.personal.portfolio,
+              targetRole: profile.target_role,
+              professionalSummary: profile.professional_summary,
+              experience: profile.experience.map((x) => ({ role: x.role, company: x.company, location: x.location, dates: x.dates, description: (x.bullets || []).join("\\n"), achievements: x.bullets || [] })),
+              education: profile.education.map((x) => ({ institution: x.institution, degree: x.degree, location: x.location, dates: x.dates, details: x.details })),
+              skills: profile.skills,
+              languages: profile.languages,
+              courses: profile.courses,
+              certifications: profile.certifications,
+              additional: profile.additional,
+            };
+            const { data, error } = await sb.functions.invoke("generar-cv", { body: { profile: apiProfile } });
             if (error) throw error;
             const result = data?.cv || data?.result || data;
             if (!result?.personal || !Array.isArray(result.experience) || !Array.isArray(result.education)) {

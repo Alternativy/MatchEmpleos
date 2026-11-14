@@ -3527,7 +3527,7 @@
       const HOSTS_PRODUCCION = ["matchempleos.com.ar", "www.matchempleos.com.ar"];
 
       const ENTORNO = HOSTS_PRODUCCION.includes(location.hostname) ? "prod" : "staging";
-      console.info("[db] entorno:", ENTORNO);
+      if (ENTORNO !== "prod") console.info("[db] entorno:", ENTORNO);
 
       // Debe leerse antes de crear el cliente: Supabase limpia el hash al procesarlo
       const VINO_DE_CORREO_CONFIRMADO = /[#&]type=(signup|email)/.test(location.hash);

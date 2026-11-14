@@ -4817,7 +4817,7 @@
           requestAnimationFrame(() => {
             const altoUtil = 277 * 96 / 25.4;
             const escala = Math.min(1, altoUtil / Math.max(paper.scrollHeight, 1));
-            paper.style.zoom = String(escala);
+            paper.style.zoom = String(Math.max(0.55, escala));
             window.print();
             setTimeout(() => { paper.style.zoom = ""; paper.style.width = ""; }, 500);
           });

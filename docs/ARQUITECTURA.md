@@ -120,6 +120,36 @@ La app usa rutas por hash (`#/...`). No hay servidor de rutas.
 
 ---
 
+## 6c. Mejora del campo “Sobre vos” con IA
+
+- El registro de postulante (paso 5) y la edición de datos personales muestran el botón **“Mejorar con IA”** debajo del texto original.
+- El botón envía el texto a la Edge Function `mejorar-sobre`. La sugerencia aparece en un segundo campo editable; no reemplaza el original automáticamente.
+- **“Usar esta versión”** copia la sugerencia al campo original. La persona puede editarla antes de guardarla o crear la cuenta.
+- Ambas Edge Functions (`mejorar-sobre` y `sugerir-respuestas-chat`) usan Gemini como proveedor principal y Groq como alternativa. El orden es `gemini-3.5-flash-lite`, `gemini-3.8-flash`, `openai/gpt-oss-120b` y `qwen/qwen3.8-27b`. Los dos últimos son modelos servidos por **Groq**; no requieren una cuenta ni una clave de OpenAI.
+- **Claves de proveedores:** configurar `GEMINI_API_KEY` y `GROQ_API_KEY` en el proyecto Supabase correspondiente, en **Edge Functions → Secrets**. Se configuran por separado en staging y producción. Si falta una de las dos, la función omite ese proveedor y continúa con el disponible; si faltan ambas, devuelve un error de configuración. No existe dependencia de `OPENAI_API_KEY`.
+- **Variables de Supabase:** el código obtiene `SUPABASE_URL` y las claves del proyecto desde el entorno de Edge Functions. Para la clave pública acepta `SUPABASE_PUBLISHABLE_KEYS` (formato JSON con propiedad `default`) o el nombre heredado `SUPABASE_ANON_KEY`; para la clave privilegiada acepta `SUPABASE_SECRET_KEYS` (formato JSON con propiedad `default`) o `SUPABASE_SERVICE_ROLE_KEY`. Son credenciales de servidor: no copiarlas a `index.html`, al repositorio ni al navegador. Nunca exponer la clave secret/service-role al cliente.
+- **Autenticación de las funciones:** el despliegue usa `verify_jwt: false` para que el handler pueda controlar el flujo. Esto no deja las operaciones sin autenticación: ambas funciones validan el Bearer token contra `/auth/v1/user`. `mejorar-sobre` también admite visitantes, pero exige un UUID anónimo y reserva un único uso en el backend. `sugerir-respuestas-chat` exige una sesión válida, rol de empresa y pertenencia del chat a esa empresa. No quitar estas validaciones internas.
+- **Estado de despliegue verificado el 12/11/2026:** en producción ambas funciones están activas y tienen `verify_jwt: false`. En staging, `mejorar-sobre` está activa con `verify_jwt: false` y `sugerir-respuestas-chat` figura con `verify_jwt: true`; mantener presente esa diferencia al probar o redeplegar.
+- La función `mejorar-sobre` valida el cuerpo y limita el texto a 4.000 caracteres. Tiene un límite temporal en memoria de 8 solicitudes por IP por minuto; es una protección básica y no reemplaza un rate limiter persistente para producción.
+- Los usuarios autenticados reservan cuota mediante RPC: 5 mejoras por día y 50 por mes. Los visitantes tienen una única mejora, identificada con UUID local y hash SHA-256 reservado en `private.anonymous_ai_usage`. La cuota se confirma como consumida solo cuando el proveedor devuelve una respuesta exitosa; si todos los proveedores fallan, se libera la reserva.
+- El frontend muestra la herramienta tanto en staging como en producción. En registro, la mejora se aplica solo si el usuario elige la propuesta; el texto original no se reemplaza automáticamente. El texto y la respuesta generada no se guardan como contenido en Supabase; solo se persiste la metadata necesaria para controlar las cuotas.
+- Para habilitar los proveedores en un entorno, configurar `GEMINI_API_KEY` y/o `GROQ_API_KEY` en **Edge Functions → Secrets** del proyecto correspondiente y desplegar las funciones. No configurar `OPENAI_API_KEY`: el modelo `openai/gpt-oss-120b` se consulta a través de la API de Groq.
+
+---
+
+## 6b. SEO y contenido estático de la landing
+
+- `index.html` tiene metadatos en el `<head>`: `title`, `meta description`, `canonical`, Open Graph, Twitter Card y datos estructurados JSON-LD (`Organization` y `WebSite`). No hay `FAQPage`, a propósito.
+- El script de `<head>` agrega `<meta name="robots" content="noindex, nofollow">` cuando el host no es `matchempleos.com.ar` ni `www.matchempleos.com.ar`. Por eso los entornos de prueba no se indexan.
+- La landing tiene **una sola fuente de texto**: el HTML dentro de `<div id="root">` en `index.html` (encabezado, hero, "¿Quiénes somos?", "Situación actual en Argentina", "¿Cómo funciona?", "¡El futuro no espera, vos tampoco!" y pie). Ese HTML se guarda en `LANDING_HTML` al arrancar. `home()` lo reutiliza y solo ajusta lo que depende de la sesión (enlace del logo y menú de cuenta). `siteFooter()` toma el pie del mismo HTML.
+- **Para cambiar un texto de la landing, editá solo el HTML de `#root`.** No hay copia en JavaScript. El pie que usan las demás pantallas sale del mismo bloque.
+- Como el contenido existe en el HTML, se ve y se indexa aunque no cargue JavaScript.
+- `titleFor()` cambia el título de la pestaña según la vista. La landing mantiene el título completo.
+- Las imágenes llevan `loading="lazy"`, excepto el hero y el logo del encabezado.
+- Las rutas con hash (`#/privacidad`, `#/terminos`, `#/ayuda`) no son URLs que un buscador indexe por separado. Está pendiente separarlas en páginas propias (ver sección 12).
+
+---
+
 ## 7. Autenticación
 
 ### Flujo de registro (candidato)

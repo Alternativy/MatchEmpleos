@@ -3338,7 +3338,42 @@
       }
     
 </style>
-  </head>
+  <style>
+        /* Constructor de CV */
+        .cv-builder{max-width:920px;margin:0 auto}
+        .cv-builder .cv-intro{margin:8px 0 22px;color:var(--t2);line-height:1.6}
+        .cv-builder .cv-section{border:1px solid var(--line,#e7e9ec);border-radius:14px;padding:18px;margin:16px 0;background:var(--surface,#fff)}
+        .cv-builder .cv-section h2{font-size:16px;font-weight:650;margin:0 0 14px}
+        .cv-builder .cv-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        .cv-builder .cv-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+        .cv-builder .cv-field.full{grid-column:1/-1}
+        .cv-builder .cv-field label{font-size:13px;font-weight:600;color:var(--t2)}
+        .cv-builder .cv-field input,.cv-builder .cv-field textarea{width:100%;min-width:0}
+        .cv-builder .cv-field textarea{min-height:92px;resize:vertical}
+        .cv-builder .cv-help{font-size:12px;color:var(--t3);line-height:1.5;margin-top:8px}
+        .cv-builder .cv-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 28px}
+        .cv-builder .cv-status{font-size:13px;color:var(--t2);min-height:20px;margin:8px 0}
+        .cv-paper{background:#fff;color:#202124;border:1px solid #e5e7eb;border-radius:4px;padding:34px 42px;margin:20px auto;max-width:790px;box-shadow:0 4px 22px #0000000d;font-family:Arial,sans-serif}
+        .cv-paper h1{font-size:25px;letter-spacing:.2px;margin:0 0 6px;color:#111}
+        .cv-paper .cv-contact{font-size:11px;color:#444;line-height:1.6;margin-bottom:18px}
+        .cv-paper h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #aaa;padding-bottom:5px;margin:18px 0 8px;color:#222}
+        .cv-paper p,.cv-paper li{font-size:11px;line-height:1.5;margin:3px 0}
+        .cv-paper ul{margin:5px 0 8px;padding-left:18px}
+        .cv-paper .cv-entry{margin:7px 0 10px}
+        .cv-paper .cv-entry strong{font-size:11px}
+        @media(max-width:640px){.cv-builder .cv-grid{grid-template-columns:1fr}.cv-builder .cv-field.full{grid-column:auto}.cv-paper{padding:24px 20px}}
+        @media print{
+          @page{size:A4;margin:16mm}
+          body{background:#fff!important}
+          body *{visibility:hidden!important}
+          #cv-paper,#cv-paper *{visibility:visible!important}
+          #cv-paper{position:absolute;left:0;top:0;width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none}
+          #cv-paper h1{font-size:22pt}
+          #cv-paper h2{font-size:10pt}
+          #cv-paper p,#cv-paper li{font-size:9.5pt}
+        }
+</style>
+</head>
   <body>
     <div id="root"> 
       <div class="site landing-v2">
@@ -4082,6 +4117,7 @@
         let S = freshState();
         let cargandoSesion = false;
         let editandoPerfil = false;
+        let CV_DRAFT = null;
         let EDIT_BACKUP = null; // datos guardados al entrar en edición, para poder cancelar
         // Al cambiar un chip durante la edición se re-renderiza la pantalla: guardar antes lo que ya escribió el usuario
         function snapshotEdicion() {
@@ -4552,7 +4588,189 @@
           const inner = `<div class="hdr"><h1 style="font-size:18px;font-weight:600">Notificaciones</h1><button class="back" data-action="leidas" data-kind="${kind}" style="color:inherit">Marcar leídas</button></div><div class="stack" style="max-width:760px">${items || '<div class="empty">No tenés novedades.</div>'}</div>`;
           return shell(kind, kind === "e" ? "#/e/notificaciones" : "#/c/notificaciones", inner);
         }
-        function cPerfil() {
+        
+        function cvLines(value) {
+          return Array.isArray(value) ? value.join("\n") : String(value || "");
+        }
+        function cvList(value) {
+          return String(value || "").split(/\n|,/).map((x) => x.trim()).filter(Boolean);
+        }
+        function cvSeed() {
+          const campos = ME.datos?.campos || {};
+          const saved = ME.datos?.cvGenerado;
+          if (saved && typeof saved === "object") return JSON.parse(JSON.stringify(saved));
+          const exp = [];
+          if (campos["rx-puesto"] || campos["rx-emp"] || campos["rx-dur"]) {
+            exp.push({
+              role: campos["rx-puesto"] || "",
+              company: campos["rx-emp"] || "",
+              location: campos["rc-ubi"] || "",
+              dates: campos["rx-dur"] || "",
+              bullets: [],
+            });
+          }
+          const education = [];
+          const educationText = campos["rc-estudios"] || campos["rc-formacion"] || campos["rc-educacion"] || "";
+          if (educationText) education.push({ institution: "", degree: educationText, location: "", dates: "", details: "" });
+          return {
+            personal: { name: miNombre() || "", email: ME.email || "", phone: campos["rc-telefono"] || "", location: campos["rc-ubi"] || "", linkedin: "", portfolio: "" },
+            target_role: campos["rc-puesto"] || "",
+            professional_summary: campos["rc-sobre"] || "",
+            experience: exp,
+            education,
+            skills: [],
+            languages: [],
+            courses: [],
+            certifications: [],
+            ats_keywords: [],
+            additional: "",
+          };
+        }
+        function cvEditor() {
+          if (!CV_DRAFT) CV_DRAFT = cvSeed();
+          const d = CV_DRAFT;
+          const p = d.personal || {};
+          const expText = (d.experience || []).map((x) => [x.role, x.company, x.location, x.dates, ...(x.bullets || [])].filter(Boolean).join(" · ")).join("\n");
+          const eduText = (d.education || []).map((x) => [x.degree, x.institution, x.location, x.dates, x.details].filter(Boolean).join(" · ")).join("\n");
+          const fields = (id, label, value, full = false, area = false) => `<div class="cv-field${full ? " full" : ""}"><label for="${id}">${label}</label>${area ? `<textarea class="field" id="${id}">${esc(value || "")}</textarea>` : `<input class="field tall" id="${id}" value="${escAttr(value || "")}">`}</div>`;
+          const paper = cvPaperHtml(d);
+          const inner = `<div class="cv-builder">
+            <div class="hdr">${backBtn("#/c/perfil")}</div>
+            <h1 class="t-title">Constructor de CV inteligente</h1>
+            <p class="cv-intro">Generá un currículum profesional compatible con sistemas ATS. La IA trabaja únicamente con la información que cargues; revisá y corregí el resultado antes de descargarlo.</p>
+            <section class="cv-section"><h2>Datos personales</h2><div class="cv-grid">
+              ${fields("cv-name","Nombre y apellido",p.name)}
+              ${fields("cv-email","Correo electrónico",p.email)}
+              ${fields("cv-phone","Teléfono",p.phone)}
+              ${fields("cv-location","Localidad",p.location)}
+              ${fields("cv-linkedin","LinkedIn",p.linkedin)}
+              ${fields("cv-portfolio","Portfolio / sitio web",p.portfolio)}
+              ${fields("cv-role","Puesto objetivo",d.target_role,true)}
+              ${fields("cv-summary","Perfil profesional / Sobre mí",d.professional_summary,true,true)}
+            </div></section>
+            <section class="cv-section"><h2>Experiencia laboral</h2><div class="cv-grid">
+              ${fields("cv-experience","Experiencias (una por línea; puesto · empresa · ubicación · fechas · tareas)",expText,true,true)}
+            </div><p class="cv-help">Si no tenés experiencia formal, podés incluir proyectos, trabajos independientes, voluntariados o prácticas. No agregues datos que no puedas respaldar.</p></section>
+            <section class="cv-section"><h2>Formación académica</h2><div class="cv-grid">
+              ${fields("cv-education","Estudios (una formación por línea)",eduText,true,true)}
+              ${fields("cv-courses","Cursos",cvLines(d.courses),true,true)}
+              ${fields("cv-certifications","Certificaciones",cvLines(d.certifications),true,true)}
+            </div></section>
+            <section class="cv-section"><h2>Competencias e idiomas</h2><div class="cv-grid">
+              ${fields("cv-skills","Habilidades (una por línea)",cvLines(d.skills),true,true)}
+              ${fields("cv-languages","Idiomas y nivel (uno por línea)",cvLines(d.languages),true,true)}
+              ${fields("cv-additional","Información adicional",d.additional,true,true)}
+            </div></section>
+            <div class="cv-actions">
+              <button class="btn pri" type="button" data-action="generar-cv">Generar CV con IA</button>
+              <button class="btn out" type="button" data-action="guardar-cv-generado">Guardar cambios</button>
+              <button class="btn out" type="button" data-action="imprimir-cv">Descargar PDF</button>
+            </div>
+            <p id="cv-status" class="cv-status" role="status"></p>
+            <div id="cv-paper" class="cv-paper">${paper}</div>
+          </div>`;
+          return shell("c", "#/c/perfil", inner);
+        }
+        function cvPaperHtml(d) {
+          if (!d) return "";
+          const p = d.personal || {};
+          const contact = [p.email, p.phone, p.location, p.linkedin, p.portfolio].filter(Boolean).map(esc).join(" · ");
+          const section = (title, body) => body ? `<section><h2>${title}</h2>${body}</section>` : "";
+          const exp = (d.experience || []).map((x) => {
+            const head = [x.role, x.company, x.location, x.dates].filter(Boolean).map(esc).join(" · ");
+            const bullets = (x.bullets || []).filter(Boolean);
+            return head || bullets.length ? `<div class="cv-entry"><strong>${head}</strong>${bullets.length ? `<ul>${bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}</div>` : "";
+          }).join("");
+          const edu = (d.education || []).map((x) => {
+            const line = [x.degree, x.institution, x.location, x.dates, x.details].filter(Boolean).map(esc).join(" · ");
+            return line ? `<p>${line}</p>` : "";
+          }).join("");
+          const list = (arr) => (arr || []).filter(Boolean).length ? `<p>${arr.filter(Boolean).map(esc).join(" · ")}</p>` : "";
+          return `<h1>${esc(p.name || "")}</h1><div class="cv-contact">${contact}</div>
+            ${section("Perfil profesional", d.professional_summary ? `<p>${esc(d.professional_summary)}</p>` : "")}
+            ${section("Experiencia laboral", exp)}
+            ${section("Formación académica", edu)}
+            ${section("Habilidades", list(d.skills))}
+            ${section("Idiomas", list(d.languages))}
+            ${section("Cursos", list(d.courses))}
+            ${section("Certificaciones", list(d.certifications))}
+            ${section("Información adicional", d.additional ? `<p>${esc(d.additional)}</p>` : "")}`;
+        }
+        function cvReadForm() {
+          const val = (id) => (document.getElementById(id)?.value || "").trim();
+          const lines = (id) => cvList(val(id));
+          const expLines = lines("cv-experience");
+          const eduLines = lines("cv-education");
+          const prev = CV_DRAFT || cvSeed();
+          const experience = expLines.map((line) => {
+            const parts = line.split("·").map((x) => x.trim());
+            return { role: parts[0] || "", company: parts[1] || "", location: parts[2] || "", dates: parts[3] || "", bullets: parts.slice(4).filter(Boolean) };
+          });
+          const education = eduLines.map((line) => {
+            const parts = line.split("·").map((x) => x.trim());
+            return { degree: parts[0] || "", institution: parts[1] || "", location: parts[2] || "", dates: parts[3] || "", details: parts.slice(4).join(" · ") };
+          });
+          return {
+            personal: { name: val("cv-name"), email: val("cv-email"), phone: val("cv-phone"), location: val("cv-location"), linkedin: val("cv-linkedin"), portfolio: val("cv-portfolio") },
+            target_role: val("cv-role"),
+            professional_summary: val("cv-summary"),
+            experience, education,
+            skills: lines("cv-skills"), languages: lines("cv-languages"),
+            courses: lines("cv-courses"), certifications: lines("cv-certifications"),
+            ats_keywords: prev.ats_keywords || [],
+            additional: val("cv-additional"),
+          };
+        }
+        function cvUpdatePreview() {
+          CV_DRAFT = cvReadForm();
+          const paper = document.getElementById("cv-paper");
+          if (paper) paper.innerHTML = cvPaperHtml(CV_DRAFT);
+        }
+        async function generarCV(button) {
+          const status = document.getElementById("cv-status");
+          const profile = cvReadForm();
+          if (!profile.personal.name || !profile.personal.email) {
+            if (status) status.textContent = "Completá al menos nombre y correo antes de generar el CV.";
+            return;
+          }
+          button.disabled = true;
+          button.textContent = "Generando…";
+          if (status) status.textContent = "La IA está organizando y redactando la información. Esto puede tardar unos segundos.";
+          try {
+            const { data, error } = await sb.functions.invoke("generar-cv", { body: { profile } });
+            if (error) throw error;
+            const result = data?.cv || data?.result || data;
+            if (!result?.personal || !Array.isArray(result.experience) || !Array.isArray(result.education)) {
+              throw new Error(data?.error || "La respuesta del generador no tiene el formato esperado.");
+            }
+            CV_DRAFT = result;
+            render(true);
+            const s = document.getElementById("cv-status");
+            if (s) s.textContent = "CV generado. Podés editar cualquier campo, guardar los cambios o descargar el PDF.";
+          } catch (err) {
+            const s = document.getElementById("cv-status");
+            if (s) s.textContent = err?.message || "No pudimos generar el CV. Revisá tu conexión e intentá nuevamente.";
+          } finally {
+            const b = document.querySelector('[data-action="generar-cv"]');
+            if (b) { b.disabled = false; b.textContent = "Generar CV con IA"; }
+          }
+        }
+        async function guardarCVGenerado() {
+          cvUpdatePreview();
+          ME.datos = { ...(ME.datos || {}), cvGenerado: CV_DRAFT };
+          const saved = await DB.guardarDatosPerfil(ME.nombre, ME.datos);
+          if (saved === null) {
+            toast("No pudimos guardar el CV. Tus cambios siguen visibles en esta pantalla.");
+            return;
+          }
+          toast("CV guardado en tu perfil.");
+        }
+        function descargarCV() {
+          cvUpdatePreview();
+          window.print();
+        }
+
+function cPerfil() {
           const env = S.c.posts.length,
             resp = S.c.posts.filter((p) => p.estado === "Respondida").length,
             mt = S.c.posts.filter((p) => p.match).length;
@@ -4569,6 +4787,7 @@
     .join("")}</div>
   <div style="margin-top:14px">${[
     ["Datos personales", "#/c/datos"],
+    ["Crear mi CV con IA", "#/c/cv"],
     ["Configuración", "#/c/config"],
   ]
     .map(
@@ -5242,6 +5461,8 @@ async function toggleBusqueda(id) {
                 return configScreen("c");
               case "datos":
                 return cDatos();
+              case "cv":
+                return cvEditor();
               case "salir":
                 return salir("c");
               case "eliminar":
@@ -5483,6 +5704,9 @@ async function toggleBusqueda(id) {
             render(true);
             return;
           }
+          if (act === "generar-cv") { generarCV(t); return; }
+          if (act === "guardar-cv-generado") { guardarCVGenerado(); return; }
+          if (act === "imprimir-cv") { descargarCV(); return; }
           if (act === "mejorar-sobre") {
             mejorarSobre(t);
             return;
@@ -5845,6 +6069,9 @@ async function toggleBusqueda(id) {
             sendChat(f.dataset.kind, f.dataset.id, inp.value);
           }
           if (f.dataset.form === "denuncia") enviarDenuncia(f);
+        });
+        document.addEventListener("input", (e) => {
+          if (e.target && e.target.id && e.target.id.startsWith("cv-")) cvUpdatePreview();
         });
         document.addEventListener("change", (e) => {
           if (e.target.id === "cv-up" && e.target.files[0]) {

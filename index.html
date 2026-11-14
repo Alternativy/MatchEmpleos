@@ -4687,6 +4687,7 @@
           }).join("");
           const list = (arr) => (arr || []).filter(Boolean).length ? `<p>${arr.filter(Boolean).map(esc).join(" · ")}</p>` : "";
           return `<h1>${esc(p.name || "")}</h1><div class="cv-contact">${contact}</div>
+            ${d.target_role ? `<p><strong>${esc(d.target_role)}</strong></p>` : ""}
             ${section("Perfil profesional", d.professional_summary ? `<p>${esc(d.professional_summary)}</p>` : "")}
             ${section("Experiencia laboral", exp)}
             ${section("Formación académica", edu)}

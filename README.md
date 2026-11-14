@@ -31,7 +31,7 @@ La documentación está separada por tema para que personas y agentes puedan con
 3. Abrir un Pull Request hacia `main`.
 4. Revisar el Deploy Preview de Netlify y los checks de GitHub Actions.
 5. Corregir en la misma rama hasta que preview y tests estén aprobados.
-6. Mergear el PR a `main); ese merge publica la versión de producción.
+6. Mergear el PR a `main`; ese merge publica la versión de producción.
 
 Los Deploy Previews deben usar Supabase **staging**. Solo los hosts `matchempleos.com.ar` y `www.matchempleos.com.ar` deben apuntar a producción. No realizar pruebas destructivas desde un preview.
 

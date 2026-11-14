@@ -3362,15 +3362,25 @@
         .cv-paper .cv-entry{margin:7px 0 10px}
         .cv-paper .cv-entry strong{font-size:11px}
         @media(max-width:640px){.cv-builder .cv-grid{grid-template-columns:1fr}.cv-builder .cv-field.full{grid-column:auto}.cv-paper{padding:24px 20px}}
+        .cv-critique{max-width:790px;margin:18px auto 40px;padding:20px 24px;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);color:var(--text,#202124)}
+        .cv-critique h2{font-size:17px;margin:0 0 12px}
+        .cv-critique h3{font-size:13px;margin:14px 0 6px}
+        .cv-critique ul{margin:6px 0;padding-left:20px}
+        .cv-critique li,.cv-critique p{font-size:13px;line-height:1.55}
+        .cv-critique .cv-critique-muted{font-size:12px;color:var(--t2);margin-top:10px}
         @media print{
-          @page{size:A4;margin:16mm}
-          body{background:#fff!important}
+          @page{size:A4;margin:10mm}
+          html,body,#root{width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}
           body *{visibility:hidden!important}
           #cv-paper,#cv-paper *{visibility:visible!important}
-          #cv-paper{position:absolute;left:0;top:0;width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none}
-          #cv-paper h1{font-size:22pt}
-          #cv-paper h2{font-size:10pt}
-          #cv-paper p,#cv-paper li{font-size:9.5pt}
+          #cv-paper{position:absolute!important;left:0!important;top:0!important;width:190mm!important;max-width:none!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important;border-radius:0!important;overflow:visible!important;transform:none!important;break-inside:avoid!important;page-break-inside:avoid!important}
+          #cv-paper h1{font-size:17pt!important;margin-bottom:3pt!important}
+          #cv-paper .cv-contact{font-size:7.5pt!important;line-height:1.25!important;margin-bottom:7pt!important}
+          #cv-paper h2{font-size:8pt!important;padding-bottom:2pt!important;margin:7pt 0 3pt!important}
+          #cv-paper p,#cv-paper li{font-size:7.5pt!important;line-height:1.2!important;margin:1pt 0!important}
+          #cv-paper ul{margin:2pt 0 3pt!important;padding-left:12pt!important}
+          #cv-paper .cv-entry{margin:3pt 0 4pt!important}
+          #cv-paper .cv-entry strong{font-size:7.5pt!important}
         }
 </style>
 </head>
@@ -4117,7 +4127,7 @@
         let S = freshState();
         let cargandoSesion = false;
         let editandoPerfil = false;
-        let CV_DRAFT = null;
+        let CV_DRAFT = null;\n        let CV_CRITIQUE = null;
         let EDIT_BACKUP = null; // datos guardados al entrar en edición, para poder cancelar
         // Al cambiar un chip durante la edición se re-renderiza la pantalla: guardar antes lo que ya escribió el usuario
         function snapshotEdicion() {
@@ -4668,6 +4678,7 @@
             </div>
             <p id="cv-status" class="cv-status" role="status"></p>
             <div id="cv-paper" class="cv-paper">${paper}</div>
+            <section id="cv-critique" class="cv-critique" aria-live="polite" ${CV_CRITIQUE ? "" : "hidden"}>${cvCritiqueHtml(CV_CRITIQUE)}</section>
           </div>`;
           return shell("c", "#/c/perfil", inner);
         }
@@ -4696,6 +4707,18 @@
             ${section("Cursos", list(d.courses))}
             ${section("Certificaciones", list(d.certifications))}
             ${section("Información adicional", d.additional ? `<p>${esc(d.additional)}</p>` : "")}`;
+        }
+        function cvCritiqueHtml(critique) {
+          if (!critique) return "";
+          const list = (items) => Array.isArray(items) && items.length
+            ? `<ul>${items.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>`
+            : "<p>No se identificaron observaciones en este apartado.</p>";
+          return `<h2>Evaluación de tu CV</h2>
+            ${critique.summary ? `<p>${esc(critique.summary)}</p>` : ""}
+            <h3>Fortalezas</h3>${list(critique.strengths)}
+            <h3>Oportunidades de mejora</h3>${list(critique.improvements)}
+            <h3>Criterios Harvard más allá del formato</h3>${list(critique.harvard_criteria)}
+            <p class="cv-critique-muted">La evaluación se basa únicamente en la información que cargaste. No reemplaza la revisión de los datos ni garantiza resultados en una búsqueda laboral.</p>`;
         }
         function cvReadForm() {
           const val = (id) => (document.getElementById(id)?.value || "").trim();
@@ -4762,9 +4785,10 @@
               throw new Error(data?.error || "La respuesta del generador no tiene el formato esperado.");
             }
             CV_DRAFT = result;
+            CV_CRITIQUE = data?.critique || null;
             render(true);
             const s = document.getElementById("cv-status");
-            if (s) s.textContent = "CV generado. Podés editar cualquier campo, guardar los cambios o descargar el PDF.";
+            if (s) s.textContent = "CV generado. Debajo encontrás una evaluación con fortalezas y mejoras concretas. Podés editar, guardar o descargar el documento.";
           } catch (err) {
             const s = document.getElementById("cv-status");
             if (s) s.textContent = err?.message || "No pudimos generar el CV. Revisá tu conexión e intentá nuevamente.";
@@ -4785,7 +4809,17 @@
         }
         function descargarCV() {
           cvUpdatePreview();
-          window.print();
+          const paper = document.getElementById("cv-paper");
+          if (!paper) return;
+          paper.style.zoom = "1";
+          paper.style.width = "190mm";
+          requestAnimationFrame(() => {
+            const altoUtil = 277 * 96 / 25.4;
+            const escala = Math.min(1, altoUtil / Math.max(paper.scrollHeight, 1));
+            paper.style.zoom = String(Math.max(0.55, escala));
+            window.print();
+            setTimeout(() => { paper.style.zoom = ""; paper.style.width = ""; }, 500);
+          });
         }
 
 function cPerfil() {

@@ -92,8 +92,11 @@ const systemPrompt = [
   "Si falta un dato, devolvé una cadena vacía o una lista vacía. No uses placeholders ni completes con suposiciones.",
   "Mantené el idioma español rioplatense profesional. Evitá tablas, columnas, íconos, gráficos, barras de nivel, foto y elementos decorativos.",
   "Las palabras clave ATS deben salir únicamente de los datos aportados. No agregues competencias que no estén respaldadas.",
+  "Además de redactar el CV, realizá una crítica constructiva y específica del contenido recibido y del CV resultante. Evaluá claridad del objetivo, resumen profesional, logros y evidencia, verbos y precisión, relevancia y priorización, coherencia cronológica, formación, habilidades respaldadas, legibilidad y compatibilidad ATS. Evaluá criterios Harvard que van más allá de la apariencia: foco en el puesto, orden cronológico inverso, evidencia concreta, concisión, consistencia, jerarquía de información y ausencia de afirmaciones sin respaldo.",
+  "No penalices a una persona por no tener experiencia formal; sugerí cómo presentar proyectos, prácticas, voluntariado o experiencia transferible solo si están en los datos.",
+  "La crítica debe ser respetuosa, accionable y priorizar mejoras de mayor impacto. No inventes debilidades ni elogios genéricos. Si falta información, indicá qué dato concreto convendría aportar. No cambies ni contradigas los datos del CV.",
   "Devolvé exclusivamente JSON válido con esta estructura exacta:",
-  '{"personal":{"name":"","email":"","phone":"","location":"","linkedin":"","portfolio":""},"target_role":"","professional_summary":"","experience":[{"role":"","company":"","location":"","dates":"","bullets":[]}],"education":[{"institution":"","degree":"","location":"","dates":"","details":""}],"skills":[],"languages":[],"courses":[],"certifications":[],"ats_keywords":[],"additional":""}',
+  '{"cv":{"personal":{"name":"","email":"","phone":"","location":"","linkedin":"","portfolio":""},"target_role":"","professional_summary":"","experience":[{"role":"","company":"","location":"","dates":"","bullets":[]}],"education":[{"institution":"","degree":"","location":"","dates":"","details":""}],"skills":[],"languages":[],"courses":[],"certifications":[],"ats_keywords":[],"additional":""},"critique":{"summary":"","strengths":[],"improvements":[],"harvard_criteria":[]}}',
 ].join(" ");
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
@@ -117,13 +120,20 @@ function extractJson(raw: string): Record<string, unknown> | null {
 }
 
 function validateOutput(value: Record<string, unknown>) {
-  const personal = value.personal;
-  if (!personal || typeof personal !== "object" || Array.isArray(personal)) return false;
-  const p = personal as Record<string, unknown>;
-  if (typeof p.name !== "string" || !Array.isArray(value.experience) ||
-      !Array.isArray(value.education) || !Array.isArray(value.skills) ||
-      !Array.isArray(value.languages) || !Array.isArray(value.ats_keywords)) return false;
-  return true;
+  const cv = value.cv;
+  const critique = value.critique;
+  if (!cv || typeof cv !== "object" || Array.isArray(cv) ||
+      !critique || typeof critique !== "object" || Array.isArray(critique)) return false;
+  const c = cv as Record<string, unknown>;
+  const personal = c.personal;
+  const p = personal && typeof personal === "object" && !Array.isArray(personal)
+    ? personal as Record<string, unknown> : null;
+  const q = critique as Record<string, unknown>;
+  return !!p && typeof p.name === "string" && Array.isArray(c.experience) &&
+    Array.isArray(c.education) && Array.isArray(c.skills) &&
+    Array.isArray(c.languages) && Array.isArray(c.ats_keywords) &&
+    typeof q.summary === "string" && Array.isArray(q.strengths) &&
+    Array.isArray(q.improvements) && Array.isArray(q.harvard_criteria);
 }
 
 async function generateWithGemini(apiKey: string, profile: object) {
@@ -209,14 +219,14 @@ Deno.serve(async (req: Request) => {
     if (geminiKey) {
       try {
         const cv = await generateWithGemini(geminiKey, profile);
-        return json({ cv, provider: "gemini" });
+        return json({ cv: cv.cv, critique: cv.critique, provider: "gemini" });
       } catch {
         if (!groqKey) throw new Error("generation_failed");
       }
     }
     if (groqKey) {
       const cv = await generateWithGroq(groqKey, profile);
-      return json({ cv, provider: "groq" });
+      return json({ cv: cv.cv, critique: cv.critique, provider: "groq" });
     }
     return json({ error: "No pudimos generar el CV. Probá nuevamente." }, 502);
   } catch {

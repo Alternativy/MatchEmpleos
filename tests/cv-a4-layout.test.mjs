@@ -36,13 +36,14 @@ test("el espaciado adaptativo también se aplica al PDF A4", () => {
 });
 
 
-test("el creador de CV limita cada campo a 4.000 caracteres y muestra su contador individual", () => {
+test("el contador aparece solo desde los 3.500 caracteres y se oculta por debajo", () => {
   assert.match(html, /data-cv-char-field="true"/);
   assert.match(html, /maxlength="4000"/);
   assert.ok(html.includes('data-cv-char-counter="${id}"'));
   assert.match(html, /const CV_FIELD_CHAR_LIMIT = 4000/);
+  assert.match(html, /content\.length < 3500 \? " hidden" : ""/, "Al crear el campo, el contador debe estar oculto por debajo de 3.500 caracteres");
+  assert.match(html, /counter\.hidden = input\.value\.length < 3500/, "Al escribir, debe ocultarse por debajo de 3.500 y mostrarse desde ese valor");
   assert.match(html, /cvUpdateCharCounter\(e\.target\)/);
-  assert.match(html, /CV_FIELD_CHAR_LIMIT/);
   assert.doesNotMatch(html, /CV_TOTAL_CHAR_LIMIT|cv-char-counter" id="cv-char-counter"/);
 });
 
@@ -91,9 +92,11 @@ test("el estado de descarga no agrega aclaraciones sobre el formato", () => {
   assert.doesNotMatch(html, /Preparando el PDF con el mismo diseño de la vista previa/);
 });
 
-test("la opción de foto muestra el texto breve Foto visible", () => {
-  assert.match(html, /\? "Foto visible" : "Primero subí una foto/);
-  assert.doesNotMatch(html, /La foto se toma de tu perfil de Match Empleos/);
+test("la opción de foto usa el checkbox y el texto solicitado", () => {
+  assert.match(html, /<strong>Incluir foto de perfil en el CV<\/strong>/);
+  assert.match(html, /id="cv-include-photo" type="checkbox"/);
+  assert.match(html, /Primero subí una foto desde tu perfil para poder incluirla/);
+  assert.doesNotMatch(html, /Foto visible|La foto se toma de tu perfil de Match Empleos/);
 });
 
 test("guardarDatosPerfil confirma la escritura solicitando la fila actualizada", () => {

@@ -73,3 +73,24 @@ test("el constructor permite incluir u omitir la foto de perfil en preview y PDF
   assert.match(html, /include_photo: profile\.include_photo/);
   assert.match(html, /e\.target\?\.id === "cv-include-photo"/);
 });
+
+
+test("la experiencia laboral de la preview separa puesto, empresa, fechas y tareas", () => {
+  assert.match(html, /class="cv-entry-role"/);
+  assert.match(html, /class="cv-entry-company"/);
+  assert.match(html, /class="cv-entry-dates"/);
+  assert.match(html, /\.cv-entry:not\(:last-child\)\{border-bottom:1px solid #dae2e9\}/);
+  assert.match(html, /\.cv-paper \.cv-entry-role\{display:block/);
+  assert.match(html, /\.cv-paper \.cv-entry-dates\{font-size:9px;font-style:italic/);
+});
+
+test("el estado de descarga no agrega aclaraciones sobre el formato", () => {
+  assert.match(html, /status\) status\.textContent = "Descargando PDF"/);
+  assert.doesNotMatch(html, /PDF A4 descargado con el mismo formato de la vista previa/);
+  assert.doesNotMatch(html, /Preparando el PDF con el mismo diseño de la vista previa/);
+});
+
+test("la opción de foto muestra el texto breve Foto visible", () => {
+  assert.match(html, /\? "Foto visible" : "Primero subí una foto/);
+  assert.doesNotMatch(html, /La foto se toma de tu perfil de Match Empleos/);
+});

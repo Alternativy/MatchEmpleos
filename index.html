@@ -4827,6 +4827,11 @@
           }
         }
         async function guardarCVGenerado() {
+          if (cvUpdateCharCounter() > CV_TOTAL_CHAR_LIMIT) {
+            const status = document.getElementById("cv-status");
+            if (status) status.textContent = "El CV supera el límite total de 4.000 caracteres. Acortá algunos campos antes de guardar.";
+            return;
+          }
           cvUpdatePreview();
           ME.datos = { ...(ME.datos || {}), cvGenerado: CV_DRAFT };
           const saved = await DB.guardarDatosPerfil(ME.nombre, ME.datos);
@@ -4837,6 +4842,11 @@
           toast("CV guardado en tu perfil.");
         }
         function descargarCV() {
+          if (cvUpdateCharCounter() > CV_TOTAL_CHAR_LIMIT) {
+            const status = document.getElementById("cv-status");
+            if (status) status.textContent = "El CV supera el límite total de 4.000 caracteres. Acortá algunos campos antes de descargar.";
+            return;
+          }
           cvUpdatePreview();
           const paper = document.getElementById("cv-paper");
           if (!paper) return;

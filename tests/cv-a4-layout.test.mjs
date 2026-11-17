@@ -62,3 +62,14 @@ test("la preview separa menos el contacto del puesto y más el puesto del perfil
   assert.match(html, /\.cv-paper \.cv-target-role\{margin:0 0 20px\}/);
   assert.match(html, /class="cv-target-role"/);
 });
+
+
+test("el constructor permite incluir u omitir la foto de perfil en preview y PDF", () => {
+  assert.match(html, /id="cv-include-photo" type="checkbox"/);
+  assert.match(html, /include_photo: !!document\.getElementById\("cv-include-photo"\)\?\.checked/);
+  assert.match(html, /d\.include_photo && p\.photo_url/);
+  assert.match(html, /cv-profile-photo/);
+  assert.match(html, /photo_url: prev\.personal\?\.photo_url \|\| ME\.avatarUrl/);
+  assert.match(html, /include_photo: profile\.include_photo/);
+  assert.match(html, /e\.target\?\.id === "cv-include-photo"/);
+});

@@ -3349,7 +3349,7 @@
         .cv-builder .cv-field.full{grid-column:1/-1}
         .cv-builder .cv-field label{font-size:13px;font-weight:600;color:var(--t2)}
         .cv-builder .cv-field input,.cv-builder .cv-field textarea{width:100%;min-width:0}
-        .cv-builder .cv-field textarea{min-height:92px;resize:vertical}
+        .cv-builder .cv-field textarea{min-height:58px;height:58px;overflow-y:hidden;resize:none}
         .cv-builder .cv-help{font-size:12px;color:var(--t3);line-height:1.5;margin-top:8px}
         .cv-builder .cv-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 28px}
         .cv-builder .cv-status{font-size:13px;color:var(--t2);min-height:20px;margin:8px 0}
@@ -4643,12 +4643,12 @@
           const p = d.personal || {};
           const expText = (d.experience || []).map((x) => [x.role, x.company, x.location, x.dates, ...(x.bullets || [])].filter(Boolean).join(" · ")).join("\n");
           const eduText = (d.education || []).map((x) => [x.degree, x.institution, x.location, x.dates, x.details].filter(Boolean).join(" · ")).join("\n");
-          const fields = (id, label, value, full = false, area = false) => `<div class="cv-field${full ? " full" : ""}"><label for="${id}">${label}</label>${area ? `<textarea class="field" id="${id}">${esc(value || "")}</textarea>` : `<input class="field tall" id="${id}" value="${escAttr(value || "")}">`}</div>`;
+          const fields = (id, label, value, full = false, area = false) => `<div class="cv-field${full ? " full" : ""}"><label for="${id}">${label}</label>${area ? `<textarea class="field" id="${id}" rows="2">${esc(value || "")}</textarea>` : `<input class="field tall" id="${id}" value="${escAttr(value || "")}">`}</div>`;
           const paper = cvPaperHtml(d);
           const inner = `<div class="cv-builder">
             <div class="hdr">${backBtn("#/c/perfil")}</div>
-            <h1 class="t-title">Constructor de CV inteligente</h1>
-            <p class="cv-intro">Generá un currículum profesional compatible con sistemas ATS. La IA trabaja únicamente con la información que cargues; revisá y corregí el resultado antes de descargarlo.</p>
+            <h1 class="t-title">Crea tu CV</h1>
+            <p class="cv-intro">Completá tus datos para crear un currículum profesional compatible con sistemas ATS. También podés usar la IA como asistencia para mejorar el contenido.</p>
             <section class="cv-section"><h2>Datos personales</h2><div class="cv-grid">
               ${fields("cv-name","Nombre y apellido",p.name)}
               ${fields("cv-email","Correo electrónico",p.email)}
@@ -4841,7 +4841,7 @@ function cPerfil() {
     .join("")}</div>
   <div style="margin-top:14px">${[
     ["Datos personales", "#/c/datos"],
-    ["Crear mi CV con IA", "#/c/cv"],
+    ["Crear mi CV", "#/c/cv"],
     ["Configuración", "#/c/config"],
   ]
     .map(
@@ -6126,7 +6126,13 @@ async function toggleBusqueda(id) {
           if (f.dataset.form === "denuncia") enviarDenuncia(f);
         });
         document.addEventListener("input", (e) => {
-          if (e.target && e.target.id && e.target.id.startsWith("cv-")) cvUpdatePreview();
+          if (e.target && e.target.id && e.target.id.startsWith("cv-")) {
+            if (e.target.tagName === "TEXTAREA") {
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }
+            cvUpdatePreview();
+          }
         });
         document.addEventListener("change", (e) => {
           if (e.target.id === "cv-up" && e.target.files[0]) {

@@ -3555,6 +3555,7 @@
       </div>
     </div>
     <script src="vendor/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="vendor/supabase.js"></script>
     <script>
       /* Capa de datos con Supabase. Debe cargarse después de supabase-js y antes del script principal. */
@@ -4829,105 +4830,72 @@
           }
           toast("CV guardado en tu perfil.");
         }
-        function descargarCV() {
+        async function descargarCV() {
           cvUpdatePreview();
           const status = document.getElementById("cv-status");
+          const paper = document.getElementById("cv-paper");
           const JsPDF = window.jspdf?.jsPDF;
-          if (!JsPDF) {
-            if (status) status.textContent = "No se pudo cargar el generador de PDF. Recargá la página e intentá nuevamente.";
+          const capture = window.html2canvas;
+
+          if (!paper || !paper.innerHTML.trim()) {
+            if (status) status.textContent = "No hay contenido para descargar. Generá o completá tu CV primero.";
+            return;
+          }
+          if (!JsPDF || !capture) {
+            if (status) status.textContent = "No se pudieron cargar las herramientas para generar el PDF. Recargá la página e intentá nuevamente.";
             return;
           }
 
-          const data = CV_DRAFT || cvReadForm();
-          const personal = data.personal || {};
-          const pageWidth = 210;
-          const pageHeight = 297;
-          const margin = 12;
-          const contentWidth = pageWidth - margin * 2;
-          const bottomLimit = pageHeight - margin;
-          const clean = (value) => String(value ?? "").replace(/[\t ]+/g, " ").trim();
-          const nonEmpty = (values) => values.map(clean).filter(Boolean);
-          const contact = nonEmpty([personal.email, personal.phone, personal.location, personal.linkedin, personal.portfolio]).join(" | ");
-          const sections = [
-            ["Perfil profesional", data.professional_summary ? [data.professional_summary] : []],
-            ["Experiencia laboral", (data.experience || []).flatMap((item) => {
-              const heading = nonEmpty([item.role, item.company, item.location, item.dates]).join(" | ");
-              return [heading, ...(item.bullets || []).map((bullet) => "- " + clean(bullet))].filter(Boolean);
-            })],
-            ["Formación académica", (data.education || []).map((item) => nonEmpty([item.degree, item.institution, item.location, item.dates, item.details]).join(" | ")).filter(Boolean)],
-            ["Habilidades", data.skills || []],
-            ["Idiomas", data.languages || []],
-            ["Cursos", data.courses || []],
-            ["Certificaciones", data.certifications || []],
-            ["Información adicional", data.additional ? [data.additional] : []],
-          ].filter((section) => section[1].some((line) => clean(line)));
+          const button = document.querySelector('[data-action="imprimir-cv"]');
+          if (button) {
+            button.disabled = true;
+            button.setAttribute("aria-busy", "true");
+          }
+          if (status) status.textContent = "Preparando el PDF con el mismo diseño de la vista previa…";
 
-          let pdf = null;
-          let fitted = false;
-          for (let scale = 1; scale >= 0.55; scale -= 0.05) {
-            const doc = new JsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-            let y = margin;
-            let overflow = false;
-            const lineHeight = (size) => size * 0.42;
-            const write = (value, size, weight = "normal", color = [24, 39, 57], gapAfter = 0) => {
-              const text = clean(value);
-              if (!text) return;
-              doc.setFont("helvetica", weight);
-              doc.setFontSize(size * scale);
-              doc.setTextColor(...color);
-              const lines = doc.splitTextToSize(text, contentWidth);
-              const height = lineHeight(size * scale) * lines.length;
-              if (y + height + gapAfter > bottomLimit) {
-                overflow = true;
-                return;
-              }
-              doc.text(lines, margin, y);
-              y += height + gapAfter;
-            };
+          try {
+            if (document.fonts?.ready) await document.fonts.ready;
+            const canvas = await capture(paper, {
+              backgroundColor: "#ffffff",
+              scale: Math.max(2, window.devicePixelRatio || 1),
+              useCORS: true,
+              logging: false,
+              width: paper.scrollWidth,
+              height: paper.scrollHeight,
+              windowWidth: Math.max(document.documentElement.clientWidth, paper.scrollWidth),
+            });
 
-            write(personal.name || "Currículum", 19, "bold", [0, 33, 71], 1.5);
-            if (contact) write(contact, 8, "normal", [70, 86, 104], 2.5);
-            if (data.target_role) write(data.target_role, 10, "bold", [15, 122, 69], 2);
+            const pdf = new JsPDF({
+              orientation: "portrait",
+              unit: "mm",
+              format: "a4",
+              compress: true,
+            });
+            const image = canvas.toDataURL("image/png");
+            pdf.addImage(image, "PNG", 0, 0, 210, 297, undefined, "FAST");
 
-            for (const [title, lines] of sections) {
-              if (overflow) break;
-              y += 1.5 * scale;
-              write(title.toUpperCase(), 9, "bold", [0, 33, 71], 1);
-              doc.setDrawColor(54, 244, 140);
-              doc.setLineWidth(0.45);
-              doc.line(margin, y - 0.4, pageWidth - margin, y - 0.4);
-              y += 1;
-              for (const line of lines) {
-                if (overflow) break;
-                const isEntryHeading = title === "Experiencia laboral" || title === "Formación académica";
-                write(line, 8.2, isEntryHeading && !String(line).startsWith("- ") ? "bold" : "normal", [35, 48, 63], 1.1);
-              }
-            }
-
-            if (!overflow) {
-              doc.setProperties({
-                title: "CV - " + (personal.name || "Candidato"),
-                subject: "Currículum vitae",
-                creator: "Match Empleos",
-              });
-              pdf = doc;
-              fitted = true;
-              break;
+            const personal = CV_DRAFT?.personal || {};
+            const filename = (personal.name || "CV")
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-zA-Z0-9_-]+/g, "-")
+              .replace(/^-+|-+$/g, "") || "CV";
+            pdf.setProperties({
+              title: "CV - " + (personal.name || "Candidato"),
+              subject: "Currículum vitae",
+              creator: "Match Empleos",
+            });
+            pdf.save("CV-" + filename + ".pdf");
+            if (status) status.textContent = "PDF A4 descargado con el mismo formato de la vista previa.";
+          } catch (error) {
+            console.error("[cv] No se pudo generar el PDF desde la vista previa:", error);
+            if (status) status.textContent = "No pudimos generar el PDF. Intentá nuevamente.";
+          } finally {
+            if (button?.isConnected) {
+              button.disabled = false;
+              button.removeAttribute("aria-busy");
             }
           }
-
-          if (!fitted || !pdf) {
-            if (status) status.textContent = "El contenido supera el espacio disponible en una hoja A4. Revisá la extensión del CV antes de descargarlo.";
-            return;
-          }
-
-          const filename = (personal.name || "CV")
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-zA-Z0-9_-]+/g, "-")
-            .replace(/^-+|-+$/g, "") || "CV";
-          pdf.save("CV-" + filename + ".pdf");
-          if (status) status.textContent = "PDF A4 generado correctamente.";
         }
 
 function cPerfil() {

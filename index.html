@@ -4651,9 +4651,12 @@
           const p = d.personal || {};
           const expText = (d.experience || []).map((x) => [x.role, x.company, x.location, x.dates, ...(x.bullets || [])].filter(Boolean).join(" · ")).join("\n");
           const eduText = (d.education || []).map((x) => [x.degree, x.institution, x.location, x.dates, x.details].filter(Boolean).join(" · ")).join("\n");
-          const fields = (id, label, value, full = false, area = false) => `<div class="cv-field${full ? " full" : ""}"><label for="${id}">${label}</label>${area ? `<textarea class="field" id="${id}" data-cv-char-field="true" rows="2">${esc(value || "")}</textarea>` : `<input class="field tall" id="${id}" data-cv-char-field="true" value="${escAttr(value || "")}">`}</div>`;
+          const fields = (id, label, value, full = false, area = false) => {
+            const content = String(value || "");
+            const counter = `<span class="cv-char-counter" data-cv-char-counter="${id}" aria-live="polite">${content.length}/4000</span>`;
+            return `<div class="cv-field${full ? " full" : ""}"><label for="${id}">${label}</label>${area ? `<textarea class="field" id="${id}" maxlength="4000" data-cv-char-field="true" rows="2">${esc(content)}</textarea>` : `<input class="field tall" id="${id}" maxlength="4000" data-cv-char-field="true" value="${escAttr(content)}">`}${counter}</div>`;
+          };
           const paper = cvPaperHtml(d);
-          const initialCharCount = [p.name, p.email, p.phone, p.location, p.linkedin, p.portfolio, d.target_role, d.professional_summary, expText, eduText, cvLines(d.courses), cvLines(d.certifications), cvLines(d.skills), cvLines(d.languages), d.additional].reduce((sum, value) => sum + String(value || "").length, 0);
           const inner = `<div class="cv-builder">
             <div class="hdr">${backBtn("#/c/perfil")}</div>
             <h1 class="t-title">Crea tu CV</h1>
@@ -4681,7 +4684,6 @@
               ${fields("cv-languages","Idiomas y nivel (uno por línea)",cvLines(d.languages),true,true)}
               ${fields("cv-additional","Información adicional",d.additional,true,true)}
             </div></section>
-            <p class="cv-char-counter${initialCharCount > 4000 ? " is-over" : ""}" id="cv-char-counter" role="status" aria-live="polite">${initialCharCount.toLocaleString("es-AR")} / 4.000 caracteres en total</p>
             <div class="cv-actions">
               <button class="btn pri" type="button" data-action="generar-cv">Generar CV con IA</button>
               <button class="btn out" type="button" data-action="guardar-cv-generado">Guardar cambios</button>
@@ -4759,16 +4761,13 @@
             additional: val("cv-additional"),
           };
         }
-        const CV_TOTAL_CHAR_LIMIT = 4000;
-        function cvUpdateCharCounter() {
-          const fields = [...document.querySelectorAll(".cv-builder [data-cv-char-field]")];
-          const total = fields.reduce((sum, field) => sum + field.value.length, 0);
-          const counter = document.getElementById("cv-char-counter");
-          if (counter) {
-            counter.textContent = `${total.toLocaleString("es-AR")} / 4.000 caracteres en total`;
-            counter.classList.toggle("is-over", total > CV_TOTAL_CHAR_LIMIT);
-          }
-          return total;
+        const CV_FIELD_CHAR_LIMIT = 4000;
+        function cvUpdateCharCounter(field) {
+          const fields = field ? [field] : [...document.querySelectorAll(".cv-builder [data-cv-char-field]")];
+          fields.forEach((input) => {
+            const counter = document.querySelector(`[data-cv-char-counter="${input.id}"]`);
+            if (counter) counter.textContent = `${input.value.length}/${CV_FIELD_CHAR_LIMIT}`;
+          });
         }
         function cvUpdatePreview() {
           CV_DRAFT = cvReadForm();
@@ -4778,10 +4777,6 @@
         async function generarCV(button) {
           const status = document.getElementById("cv-status");
           const profile = cvReadForm();
-          if (cvUpdateCharCounter() > CV_TOTAL_CHAR_LIMIT) {
-            if (status) status.textContent = "El CV supera el límite total de 4.000 caracteres. Acortá algunos campos antes de generar.";
-            return;
-          }
           if (!profile.personal.name || !profile.personal.email) {
             if (status) status.textContent = "Completá al menos nombre y correo antes de generar el CV.";
             return;
@@ -4827,11 +4822,6 @@
           }
         }
         async function guardarCVGenerado() {
-          if (cvUpdateCharCounter() > CV_TOTAL_CHAR_LIMIT) {
-            const status = document.getElementById("cv-status");
-            if (status) status.textContent = "El CV supera el límite total de 4.000 caracteres. Acortá algunos campos antes de guardar.";
-            return;
-          }
           cvUpdatePreview();
           ME.datos = { ...(ME.datos || {}), cvGenerado: CV_DRAFT };
           const saved = await DB.guardarDatosPerfil(ME.nombre, ME.datos);
@@ -4842,11 +4832,6 @@
           toast("CV guardado en tu perfil.");
         }
         function descargarCV() {
-          if (cvUpdateCharCounter() > CV_TOTAL_CHAR_LIMIT) {
-            const status = document.getElementById("cv-status");
-            if (status) status.textContent = "El CV supera el límite total de 4.000 caracteres. Acortá algunos campos antes de descargar.";
-            return;
-          }
           cvUpdatePreview();
           const paper = document.getElementById("cv-paper");
           if (!paper) return;
@@ -6162,23 +6147,9 @@ async function toggleBusqueda(id) {
           }
           if (f.dataset.form === "denuncia") enviarDenuncia(f);
         });
-        document.addEventListener("focusin", (e) => {
-          if (e.target?.matches?.(".cv-builder [data-cv-char-field]")) e.target.dataset.cvLastValid = e.target.value;
-        });
         document.addEventListener("input", (e) => {
           if (e.target && e.target.id && e.target.id.startsWith("cv-")) {
-            if (e.target.matches("[data-cv-char-field]")) {
-              const total = cvUpdateCharCounter();
-              const previous = e.target.dataset.cvLastValid ?? e.target.value;
-              if (total > CV_TOTAL_CHAR_LIMIT && e.target.value.length >= previous.length) {
-                e.target.value = previous;
-                const status = document.getElementById("cv-status");
-                if (status) status.textContent = "El CV admite hasta 4.000 caracteres entre todos los campos. Acortá otro campo para seguir escribiendo.";
-              } else {
-                e.target.dataset.cvLastValid = e.target.value;
-              }
-              cvUpdateCharCounter();
-            }
+            if (e.target.matches("[data-cv-char-field]")) cvUpdateCharCounter(e.target);
             if (e.target.tagName === "TEXTAREA") {
               e.target.style.height = "auto";
               e.target.style.height = e.target.scrollHeight + "px";

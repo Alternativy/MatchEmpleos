@@ -3753,8 +3753,12 @@
         },
 
         guardarDatosPerfil(nombre, datos) {
+          if (!ME.id) {
+            toast("Iniciá sesión para guardar los cambios.");
+            return Promise.resolve(null);
+          }
           return persistir(
-            sb.from("perfiles").update({ nombre, datos }).eq("id", ME.id),
+            sb.from("perfiles").update({ nombre, datos }).eq("id", ME.id).select("id").single(),
             "guardarDatosPerfil",
           );
         },

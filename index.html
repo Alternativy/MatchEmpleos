@@ -3353,7 +3353,7 @@
         .cv-builder .cv-help{font-size:12px;color:var(--t3);line-height:1.5;margin-top:8px}
         .cv-builder .cv-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 28px}
         .cv-builder .cv-status{font-size:13px;color:var(--t2);min-height:20px;margin:8px 0}
-        .cv-paper{background:#fff;color:#202124;border:1px solid #e5e7eb;border-radius:4px;padding:34px 42px;margin:20px auto;max-width:790px;box-shadow:0 4px 22px #0000000d;font-family:Arial,sans-serif}
+        .cv-paper{background:#fff;color:#202124;border:1px solid #e5e7eb;border-radius:4px;padding:34px 42px;margin:20px auto;width:100%;max-width:790px;aspect-ratio:210 / 297;height:auto;overflow:hidden;box-shadow:0 4px 22px #0000000d;font-family:Arial,sans-serif}
         .cv-paper h1{font-size:25px;letter-spacing:.2px;margin:0 0 6px;color:#111}
         .cv-paper .cv-contact{font-size:11px;color:#444;line-height:1.6;margin-bottom:18px}
         .cv-paper h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #aaa;padding-bottom:5px;margin:18px 0 8px;color:#222}
@@ -3369,7 +3369,7 @@
         .cv-critique li,.cv-critique p{font-size:13px;line-height:1.55}
         .cv-critique .cv-critique-muted{font-size:12px;color:var(--t2);margin-top:10px}
         @media print{
-          @page{size:A4;margin:10mm}
+          @page{size:A4 portrait;margin:10mm}
           html,body,#root{width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}
           body *{visibility:hidden!important}
           #cv-paper,#cv-paper *{visibility:visible!important}

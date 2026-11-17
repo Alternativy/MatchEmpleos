@@ -4845,7 +4845,7 @@
           const margin = 12;
           const contentWidth = pageWidth - margin * 2;
           const bottomLimit = pageHeight - margin;
-          const clean = (value) => String(value ?? "").replace(/[\\t ]+/g, " ").trim();
+          const clean = (value) => String(value ?? "").replace(/[\t ]+/g, " ").trim();
           const nonEmpty = (values) => values.map(clean).filter(Boolean);
           const contact = nonEmpty([personal.email, personal.phone, personal.location, personal.linkedin, personal.portfolio]).join(" | ");
           const sections = [
@@ -4923,7 +4923,7 @@
 
           const filename = (personal.name || "CV")
             .normalize("NFD")
-            .replace(/[\\u0300-\\u036f]/g, "")
+            .replace(/[\u0300-\u036f]/g, "")
             .replace(/[^a-zA-Z0-9_-]+/g, "-")
             .replace(/^-+|-+$/g, "") || "CV";
           pdf.save("CV-" + filename + ".pdf");

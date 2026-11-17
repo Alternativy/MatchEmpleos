@@ -4664,7 +4664,7 @@
           const eduText = (d.education || []).map((x) => [x.degree, x.institution, x.location, x.dates, x.details].filter(Boolean).join(" · ")).join("\n");
           const fields = (id, label, value, full = false, area = false) => {
             const content = String(value || "");
-            const counter = `<span class="cv-char-counter" data-cv-char-counter="${id}" aria-live="polite">${content.length}/4000</span>`;
+            const counter = `<span class="cv-char-counter" data-cv-char-counter="${id}" aria-live="polite"${content.length < 3500 ? " hidden" : ""}>${content.length}/4000</span>`;
             return `<div class="cv-field${full ? " full" : ""}"><label for="${id}">${label}</label>${area ? `<textarea class="field" id="${id}" maxlength="4000" data-cv-char-field="true" rows="2">${esc(content)}</textarea>` : `<input class="field tall" id="${id}" maxlength="4000" data-cv-char-field="true" value="${escAttr(content)}">`}${counter}</div>`;
           };
           const paper = cvPaperHtml(d);
@@ -4770,7 +4770,10 @@
           const fields = field ? [field] : [...document.querySelectorAll(".cv-builder [data-cv-char-field]")];
           fields.forEach((input) => {
             const counter = document.querySelector(`[data-cv-char-counter="${input.id}"]`);
-            if (counter) counter.textContent = `${input.value.length}/${CV_FIELD_CHAR_LIMIT}`;
+            if (counter) {
+              counter.textContent = `${input.value.length}/${CV_FIELD_CHAR_LIMIT}`;
+              counter.hidden = input.value.length < 3500;
+            }
           });
         }
         function cvUpdatePreview() {

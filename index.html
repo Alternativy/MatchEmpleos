@@ -3360,6 +3360,9 @@
         .cv-paper .cv-sections>section{flex:0 0 auto;margin:0}
         .cv-paper .cv-sections>section h2{margin:0 0 7px}
         .cv-paper h1{font-size:25px;letter-spacing:.2px;margin:0 0 6px;color:#111}
+        .cv-paper .cv-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:0}
+        .cv-paper .cv-header-main{flex:1;min-width:0}
+        .cv-paper .cv-profile-photo{width:76px;height:76px;flex:0 0 76px;object-fit:cover;border-radius:8px}
         .cv-paper .cv-contact{font-size:11px;color:#444;line-height:1.6;margin-bottom:8px}
         .cv-paper .cv-target-role{margin:0 0 20px}
         .cv-paper h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #aaa;padding-bottom:5px;margin:18px 0 8px;color:#222}
@@ -4628,7 +4631,8 @@
           const educationText = campos["rc-estudios"] || campos["rc-formacion"] || campos["rc-educacion"] || "";
           if (educationText) education.push({ institution: "", degree: educationText, location: "", dates: "", details: "" });
           return {
-            personal: { name: miNombre() || "", email: ME.email || "", phone: campos["rc-telefono"] || "", location: campos["rc-ubi"] || "", linkedin: "", portfolio: "" },
+            personal: { name: miNombre() || "", email: ME.email || "", phone: campos["rc-telefono"] || "", location: campos["rc-ubi"] || "", linkedin: "", portfolio: "", photo_url: ME.avatarUrl || "" },
+            include_photo: false,
             target_role: campos["rc-puesto"] || "",
             professional_summary: campos["rc-sobre"] || "",
             experience: exp,
@@ -4664,6 +4668,7 @@
               ${fields("cv-location","Localidad",p.location)}
               ${fields("cv-linkedin","LinkedIn",p.linkedin)}
               ${fields("cv-portfolio","Portfolio / sitio web",p.portfolio)}
+              <div class="cv-field full"><label for="cv-include-photo"><input id="cv-include-photo" type="checkbox"${d.include_photo && ME.avatarUrl ? " checked" : ""}${ME.avatarUrl ? "" : " disabled"}> Incluir foto de perfil en el CV</label><p class="cv-help">${ME.avatarUrl ? "La foto se toma de tu perfil de Match Empleos." : "Primero subí una foto desde tu perfil para poder incluirla."}</p></div>
               ${fields("cv-role","Puesto objetivo",d.target_role,true)}
               ${fields("cv-summary","Perfil profesional / Sobre mí",d.professional_summary,true,true)}
             </div></section>
@@ -4705,7 +4710,8 @@
             return line ? `<p>${line}</p>` : "";
           }).join("");
           const list = (arr) => (arr || []).filter(Boolean).length ? `<p>${arr.filter(Boolean).map(esc).join(" · ")}</p>` : "";
-          return `<h1>${esc(p.name || "")}</h1><div class="cv-contact">${contact}</div>
+          const photo = d.include_photo && p.photo_url ? `<img class="cv-profile-photo" src="${escAttr(p.photo_url)}" crossorigin="anonymous" alt="Foto de perfil">` : "";
+          return `<div class="cv-header"><div class="cv-header-main"><h1>${esc(p.name || "")}</h1><div class="cv-contact">${contact}</div></div>${photo}</div>
             ${d.target_role ? `<p class="cv-target-role"><strong>${esc(d.target_role)}</strong></p>` : ""}
             <div class="cv-sections">
               ${section("Perfil profesional", d.professional_summary ? `<p>${esc(d.professional_summary)}</p>` : "")}
@@ -4733,7 +4739,8 @@
             return { degree: parts[0] || "", institution: parts[1] || "", location: parts[2] || "", dates: parts[3] || "", details: parts.slice(4).join(" · ") };
           });
           return {
-            personal: { name: val("cv-name"), email: val("cv-email"), phone: val("cv-phone"), location: val("cv-location"), linkedin: val("cv-linkedin"), portfolio: val("cv-portfolio") },
+            personal: { name: val("cv-name"), email: val("cv-email"), phone: val("cv-phone"), location: val("cv-location"), linkedin: val("cv-linkedin"), portfolio: val("cv-portfolio"), photo_url: prev.personal?.photo_url || ME.avatarUrl || "" },
+            include_photo: !!document.getElementById("cv-include-photo")?.checked,
             target_role: val("cv-role"),
             professional_summary: val("cv-summary"),
             experience, education,
@@ -4798,7 +4805,8 @@
               throw new Error("La Edge Function devolvió una respuesta incompleta o con un formato inesperado.");
             }
             CV_DRAFT = {
-              personal: result.personal,
+              personal: { ...result.personal, photo_url: profile.personal.photo_url || ME.avatarUrl || "" },
+              include_photo: profile.include_photo,
               target_role: typeof result.target_role === "string" ? result.target_role : "",
               professional_summary: typeof result.professional_summary === "string" ? result.professional_summary : "",
               experience: result.experience,
@@ -5725,6 +5733,9 @@ async function toggleBusqueda(id) {
         });
 
         /* ---------- Eventos ---------- */
+        document.addEventListener("change", (e) => {
+          if (e.target?.id === "cv-include-photo") cvUpdatePreview();
+        });
         document.addEventListener("click", (e) => {
           const t = e.target.closest(
             "[data-scroll],[data-go],[data-apply],[data-action],[data-chip],[data-filter],[data-cfilter],[data-plazo],[data-tpl],[data-notif],[data-bsel],[data-denunciar]",

@@ -118,6 +118,17 @@ La app usa rutas por hash (`#/...`). No hay servidor de rutas.
 - `sendChat()` guarda únicamente el mensaje que envía el usuario. La respuesta debe llegar desde la otra cuenta mediante la base de datos y Realtime.
 - No borrar datos históricos de staging como parte de un cambio de frontend sin una instrucción y respaldo específicos.
 
+## 6d. Generación de CV con IA
+
+- El constructor de CV llama a la Edge Function `generar-cv` mediante `sb.functions.invoke("generar-cv", { body: { profile } })`. El navegador envía únicamente los datos del perfil; las claves de proveedores permanecen en Supabase.
+- La función normaliza y limita los datos de entrada, solicita un CV compatible con ATS y una crítica personalizada, valida el JSON devuelto y responde con `{ cv, critique, provider }`. La IA no debe inventar empleos, fechas, títulos, herramientas, idiomas, logros ni métricas.
+- Proveedor principal: Gemini API, modelo `gemini-3.5-flash-lite`. Alternativa: Groq, modelo `openai/gpt-oss-120b`. Requiere `GEMINI_API_KEY` y/o `GROQ_API_KEY` en Edge Functions → Secrets de cada proyecto. Las variables ya fueron confirmadas por el responsable del proyecto; no incluir sus valores en el repositorio.
+- La función requiere sesión autenticada. Su despliegue debe conservar `verify_jwt: true`; no aceptar llamadas anónimas para generar CV.
+- La función está desplegada en **staging** como versión 2, con `verify_jwt: true`, usando el código de `supabase/functions/generar-cv/index.ts` de esta rama. Producción todavía no tiene esta función; no desplegarla allí hasta completar las pruebas de staging y autorizar el pase.
+- **Pendiente de integración de interfaz:** el frontend aplica `data.cv` al editor, pero todavía no presenta `data.critique` (resumen, fortalezas, mejoras y criterios Harvard). La crítica debe mostrarse como feedback accionable y separado del contenido del CV; nunca debe modificar el documento automáticamente.
+- **Pendiente de validación funcional:** ejecutar una generación real con cuenta autenticada en staging, comprobar el fallback Gemini → Groq, respuestas de error (sin sesión, datos inválidos, proveedor caído y JSON inválido), guardado, edición y descarga PDF. Los tests actuales del constructor son principalmente estáticos y no sustituyen estas pruebas.
+- Para producción: desplegar exactamente el mismo código validado en staging, mantener `verify_jwt: true`, verificar los secretos del proyecto productivo y hacer una prueba controlada con una cuenta interna antes de habilitarlo a todos los usuarios.
+
 ## 6c. Mejora del campo “Sobre vos” con IA
 
 - El registro de postulante (paso 5) y la edición de datos personales muestran el botón **“Mejorar con IA”** debajo del texto original.

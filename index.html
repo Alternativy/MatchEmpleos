@@ -3360,7 +3360,8 @@
         .cv-paper .cv-sections>section{flex:0 0 auto;margin:0}
         .cv-paper .cv-sections>section h2{margin:0 0 7px}
         .cv-paper h1{font-size:25px;letter-spacing:.2px;margin:0 0 6px;color:#111}
-        .cv-paper .cv-contact{font-size:11px;color:#444;line-height:1.6;margin-bottom:18px}
+        .cv-paper .cv-contact{font-size:11px;color:#444;line-height:1.6;margin-bottom:8px}
+        .cv-paper .cv-target-role{margin:0 0 20px}
         .cv-paper h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #aaa;padding-bottom:5px;margin:18px 0 8px;color:#222}
         .cv-paper p,.cv-paper li{font-size:11px;line-height:1.5;margin:3px 0}
         .cv-paper ul{margin:5px 0 8px;padding-left:18px}
@@ -4705,7 +4706,7 @@
           }).join("");
           const list = (arr) => (arr || []).filter(Boolean).length ? `<p>${arr.filter(Boolean).map(esc).join(" · ")}</p>` : "";
           return `<h1>${esc(p.name || "")}</h1><div class="cv-contact">${contact}</div>
-            ${d.target_role ? `<p><strong>${esc(d.target_role)}</strong></p>` : ""}
+            ${d.target_role ? `<p class="cv-target-role"><strong>${esc(d.target_role)}</strong></p>` : ""}
             <div class="cv-sections">
               ${section("Perfil profesional", d.professional_summary ? `<p>${esc(d.professional_summary)}</p>` : "")}
               ${section("Experiencia laboral", exp)}

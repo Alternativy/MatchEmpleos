@@ -50,5 +50,5 @@ test("la descarga del CV genera un PDF A4 con jsPDF sin usar la impresión del n
   assert.ok(html.includes('new JsPDF({ orientation: "portrait", unit: "mm", format: "a4"'));
   assert.ok(html.includes('pdf.save("CV-" + filename + ".pdf")'));
   const download = html.slice(html.indexOf("function descargarCV()"), html.indexOf("function cPerfil()"));
-  assert.doesNotMatch(download, /window\\.print\\(/);
+  assert.equal(download.includes("window.print"), false);
 });

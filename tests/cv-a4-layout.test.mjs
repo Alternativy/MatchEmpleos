@@ -45,10 +45,14 @@ test("el creador de CV limita cada campo a 4.000 caracteres y muestra su contado
   assert.doesNotMatch(html, /CV_TOTAL_CHAR_LIMIT|cv-char-counter" id="cv-char-counter"/);
 });
 
-test("la descarga del CV genera un PDF A4 con jsPDF sin usar la impresión del navegador", () => {
+test("la descarga PDF captura la misma preview HTML sin modificar su diseño", () => {
   assert.ok(html.includes('<script src="vendor/jspdf.umd.min.js"></script>'));
-  assert.ok(html.includes('new JsPDF({ orientation: "portrait", unit: "mm", format: "a4"'));
+  assert.ok(html.includes('src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"'));
+  assert.match(html, /async function descargarCV\(\)/);
+  assert.match(html, /capture\(paper,\s*\{/);
+  assert.match(html, /pdf\.addImage\(image, "PNG", 0, 0, 210, 297/);
   assert.ok(html.includes('pdf.save("CV-" + filename + ".pdf")'));
-  const download = html.slice(html.indexOf("function descargarCV()"), html.indexOf("function cPerfil()"));
+  const download = html.slice(html.indexOf("async function descargarCV()"), html.indexOf("function cPerfil()"));
   assert.equal(download.includes("window.print"), false);
+  assert.equal(download.includes("paper.innerHTML ="), false, "La descarga no debe alterar el HTML de la preview");
 });

@@ -56,3 +56,9 @@ test("la descarga PDF captura la misma preview HTML sin modificar su diseño", (
   assert.equal(download.includes("window.print"), false);
   assert.equal(download.includes("paper.innerHTML ="), false, "La descarga no debe alterar el HTML de la preview");
 });
+
+test("la preview separa menos el contacto del puesto y más el puesto del perfil", () => {
+  assert.match(html, /\.cv-paper \.cv-contact\{[^}]*margin-bottom:8px/);
+  assert.match(html, /\.cv-paper \.cv-target-role\{margin:0 0 20px\}/);
+  assert.match(html, /class="cv-target-role"/);
+});

@@ -136,6 +136,39 @@ function validateOutput(value: Record<string, unknown>) {
     Array.isArray(q.improvements) && Array.isArray(q.harvard_criteria);
 }
 
+// Los datos de contacto se conservan para el CV, pero nunca se envían a Gemini/Groq.
+function profileForAi(profile: NonNullable<ReturnType<typeof normalizeProfile>>) {
+  const {
+    name: _name,
+    email: _email,
+    phone: _phone,
+    linkedin: _linkedin,
+    portfolio: _portfolio,
+    ...professionalData
+  } = profile;
+  return professionalData;
+}
+
+function restorePersonalData(result: Record<string, unknown>, profile: NonNullable<ReturnType<typeof normalizeProfile>>) {
+  const cv = result.cv as Record<string, unknown>;
+  const personal = (cv.personal && typeof cv.personal === "object" ? cv.personal : {}) as Record<string, unknown>;
+  return {
+    ...result,
+    cv: {
+      ...cv,
+      personal: {
+        ...personal,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        location: profile.location,
+        linkedin: profile.linkedin,
+        portfolio: profile.portfolio,
+      },
+    },
+  };
+}
+
 async function generateWithGemini(apiKey: string, profile: object) {
   const response = await fetchWithTimeout(
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
@@ -215,17 +248,20 @@ Deno.serve(async (req: Request) => {
   const groqKey = Deno.env.get("GROQ_API_KEY");
   if (!geminiKey && !groqKey) return json({ error: "El servicio de IA no está configurado." }, 503);
 
+  const aiProfile = profileForAi(profile);
   try {
     if (geminiKey) {
       try {
-        const cv = await generateWithGemini(geminiKey, profile);
+        const generated = await generateWithGemini(geminiKey, aiProfile);
+        const cv = restorePersonalData(generated, profile);
         return json({ cv: cv.cv, critique: cv.critique, provider: "gemini" });
       } catch {
         if (!groqKey) throw new Error("generation_failed");
       }
     }
     if (groqKey) {
-      const cv = await generateWithGroq(groqKey, profile);
+      const generated = await generateWithGroq(groqKey, aiProfile);
+      const cv = restorePersonalData(generated, profile);
       return json({ cv: cv.cv, critique: cv.critique, provider: "groq" });
     }
     return json({ error: "No pudimos generar el CV. Probá nuevamente." }, 502);

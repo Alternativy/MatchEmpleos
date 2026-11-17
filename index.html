@@ -4848,12 +4848,12 @@
           const clean = (value) => String(value ?? "").replace(/[\t ]+/g, " ").trim();
           const nonEmpty = (values) => values.map(clean).filter(Boolean);
           const contact = nonEmpty([personal.email, personal.phone, personal.location, personal.linkedin, personal.portfolio]).join(" | ");
+          const experiences = (data.experience || []).filter((item) =>
+            nonEmpty([item.role, item.company, item.location, item.dates, ...(item.bullets || [])]).length
+          );
           const sections = [
             ["Perfil profesional", data.professional_summary ? [data.professional_summary] : []],
-            ["Experiencia laboral", (data.experience || []).flatMap((item) => {
-              const heading = nonEmpty([item.role, item.company, item.location, item.dates]).join(" | ");
-              return [heading, ...(item.bullets || []).map((bullet) => "- " + clean(bullet))].filter(Boolean);
-            })],
+            ["Experiencia laboral", experiences],
             ["Formación académica", (data.education || []).map((item) => nonEmpty([item.degree, item.institution, item.location, item.dates, item.details]).join(" | ")).filter(Boolean)],
             ["Habilidades", data.skills || []],
             ["Idiomas", data.languages || []],
@@ -4869,20 +4869,42 @@
             let y = margin;
             let overflow = false;
             const lineHeight = (size) => size * 0.42;
-            const write = (value, size, weight = "normal", color = [24, 39, 57], gapAfter = 0) => {
+            const write = (value, size, weight = "normal", color = [24, 39, 57], gapAfter = 0, x = margin, width = contentWidth) => {
               const text = clean(value);
               if (!text) return;
               doc.setFont("helvetica", weight);
               doc.setFontSize(size * scale);
               doc.setTextColor(...color);
-              const lines = doc.splitTextToSize(text, contentWidth);
+              const lines = doc.splitTextToSize(text, width);
               const height = lineHeight(size * scale) * lines.length;
               if (y + height + gapAfter > bottomLimit) {
                 overflow = true;
                 return;
               }
-              doc.text(lines, margin, y);
+              doc.text(lines, x, y);
               y += height + gapAfter;
+            };
+            const writeExperience = (item, index) => {
+              const role = clean(item.role) || "Puesto";
+              const company = nonEmpty([item.company, item.location]).join(" · ");
+              const dates = clean(item.dates);
+              write(role, 9, "bold", [0, 33, 71], 0.6);
+              if (company) write(company, 7.6, "normal", [70, 86, 104], 0.4);
+              if (dates) write(dates, 7.2, "italic", [15, 122, 69], 1);
+              for (const bullet of (item.bullets || []).map(clean).filter(Boolean)) {
+                if (overflow) break;
+                write("- " + bullet, 7.6, "normal", [35, 48, 63], 0.55, margin + 2.5, contentWidth - 2.5);
+              }
+              if (index < experiences.length - 1 && !overflow) {
+                y += 1.2 * scale;
+                if (y + 0.3 > bottomLimit) overflow = true;
+                else {
+                  doc.setDrawColor(218, 226, 233);
+                  doc.setLineWidth(0.2);
+                  doc.line(margin, y, pageWidth - margin, y);
+                  y += 1.8 * scale;
+                }
+              }
             };
 
             write(personal.name || "Currículum", 19, "bold", [0, 33, 71], 1.5);
@@ -4897,10 +4919,16 @@
               doc.setLineWidth(0.45);
               doc.line(margin, y - 0.4, pageWidth - margin, y - 0.4);
               y += 1;
-              for (const line of lines) {
-                if (overflow) break;
-                const isEntryHeading = title === "Experiencia laboral" || title === "Formación académica";
-                write(line, 8.2, isEntryHeading && !String(line).startsWith("- ") ? "bold" : "normal", [35, 48, 63], 1.1);
+              if (title === "Experiencia laboral") {
+                lines.forEach((item, index) => {
+                  if (!overflow) writeExperience(item, index);
+                });
+              } else {
+                for (const line of lines) {
+                  if (overflow) break;
+                  const isEntryHeading = title === "Formación académica";
+                  write(line, 8.2, isEntryHeading ? "bold" : "normal", [35, 48, 63], 1.1);
+                }
               }
             }
 

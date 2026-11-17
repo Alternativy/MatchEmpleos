@@ -52,3 +52,14 @@ test("la descarga del CV genera un PDF A4 con jsPDF sin usar la impresión del n
   const download = html.slice(html.indexOf("function descargarCV()"), html.indexOf("function cPerfil()"));
   assert.equal(download.includes("window.print"), false);
 });
+
+test("la experiencia laboral del PDF se presenta en bloques con jerarquía visual", () => {
+  const download = html.slice(html.indexOf("function descargarCV()"), html.indexOf("function cPerfil()"));
+  assert.match(download, /const experiences = \(data\.experience \|\| \[\]\)/);
+  assert.match(download, /const writeExperience = \(item, index\)/);
+  assert.match(download, /write\(role, 9, "bold"/);
+  assert.match(download, /write\(company, 7\.6, "normal"/);
+  assert.match(download, /write\(dates, 7\.2, "italic"/);
+  assert.match(download, /write\("- " \+ bullet/);
+  assert.match(download, /doc\.line\(margin, y, pageWidth - margin, y\)/);
+});

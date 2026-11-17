@@ -326,3 +326,11 @@ Los siguientes puntos son importantes: existen commits o archivos de backend/SQL
 - [ ] Resolver cómo las preferencias de empresa deben inicializar `jornada` y `turno` en la primera búsqueda, si corresponde según la definición del producto.
 - [ ] Agregar pruebas parametrizadas para cero, una, varias y todas las opciones, desmarcado total, registro, edición, recarga, nueva sesión y matching.
 - [ ] Probar el flujo completo en staging con cuentas reales de postulante y empresa; no ejecutar pruebas destructivas sobre producción.
+
+## Ideas para desarrollar a futuro
+
+Las siguientes propuestas quedan registradas como ideas de producto. No representan funcionalidades implementadas ni compromisos de fecha.
+
+- **Internacionalización y expansión lingüística:** traducir la interfaz y los contenidos a múltiples idiomas, priorizando inglés (con una adaptación de marca como **Match Jobs**) y mandarín. La traducción deberá contemplar también formatos, textos de ayuda, notificaciones y comunicaciones por correo.
+- **Feed de oportunidades laborales:** crear una sección donde los usuarios puedan publicar imágenes o capturas de búsquedas laborales encontradas en otras plataformas, redes sociales u otros soportes. Evaluar mecanismos para identificar la fuente, evitar duplicados y facilitar que otros usuarios consulten la oportunidad.
+- **Filtros avanzados para empresas:** permitir que las empresas filtren candidatos según las variables disponibles en el registro y perfil, como rango etario, turnos/horarios, modalidad, tipo de jornada, experiencia, rubros y otras preferencias declaradas. Definir qué filtros son pertinentes para cada búsqueda y asegurar que su uso respete la normativa aplicable y criterios de selección no discriminatorios.

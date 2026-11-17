@@ -35,11 +35,12 @@ test("el espaciado adaptativo también se aplica al PDF A4", () => {
 });
 
 
-test("el creador de CV limita y cuenta 4.000 caracteres entre todos los campos", () => {
+test("el creador de CV limita cada campo a 4.000 caracteres y muestra su contador individual", () => {
   assert.match(html, /data-cv-char-field="true"/);
-  assert.match(html, /id="cv-char-counter"/);
-  assert.match(html, /const CV_TOTAL_CHAR_LIMIT = 4000/);
-  assert.match(html, /total > CV_TOTAL_CHAR_LIMIT/);
-  assert.match(html, /4\.000 caracteres en total/);
-  assert.match(html, /cvUpdateCharCounter\(\) > CV_TOTAL_CHAR_LIMIT/);
+  assert.match(html, /maxlength="4000"/);
+  assert.match(html, /data-cv-char-counter="${id}"/);
+  assert.match(html, /const CV_FIELD_CHAR_LIMIT = 4000/);
+  assert.match(html, /cvUpdateCharCounter\(e\.target\)/);
+  assert.match(html, /CV_FIELD_CHAR_LIMIT/);
+  assert.doesNotMatch(html, /CV_TOTAL_CHAR_LIMIT|cv-char-counter" id="cv-char-counter"/);
 });

@@ -20,3 +20,16 @@ test("la impresión del CV está configurada en A4 vertical", () => {
   assert.match(html, /@page\s*\{\s*size\s*:\s*A4\s+portrait\s*;/i);
   assert.match(html, /#cv-paper\s*\{[^}]*height\s*:\s*277mm/i);
 });
+
+
+test("las secciones del CV distribuyen el espacio vertical disponible", () => {
+  assert.match(html, /\.cv-paper\s*\{[^}]*display\s*:\s*flex/i);
+  assert.match(html, /\.cv-paper\s*\{[^}]*flex-direction\s*:\s*column/i);
+  assert.match(html, /\.cv-paper\s+\.cv-sections\s*\{[^}]*justify-content\s*:\s*space-between/i);
+  assert.match(html, /<div class="cv-sections">[\s\S]*?section\("Información adicional"/);
+});
+
+test("el espaciado adaptativo también se aplica al PDF A4", () => {
+  assert.match(html, /#cv-paper\s+\.cv-sections\s*\{[^}]*justify-content\s*:\s*space-between/i);
+  assert.match(html, /#cv-paper\s+\.cv-sections>section\s*\{[^}]*flex\s*:\s*0\s+0\s+auto/i);
+});

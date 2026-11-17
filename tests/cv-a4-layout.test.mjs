@@ -45,21 +45,71 @@ test("el creador de CV limita cada campo a 4.000 caracteres y muestra su contado
   assert.doesNotMatch(html, /CV_TOTAL_CHAR_LIMIT|cv-char-counter" id="cv-char-counter"/);
 });
 
-test("la descarga del CV genera un PDF A4 con jsPDF sin usar la impresión del navegador", () => {
+test("la descarga PDF captura la misma preview HTML sin modificar su diseño", () => {
   assert.ok(html.includes('<script src="vendor/jspdf.umd.min.js"></script>'));
-  assert.ok(html.includes('new JsPDF({ orientation: "portrait", unit: "mm", format: "a4"'));
+  assert.ok(html.includes('src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"'));
+  assert.match(html, /async function descargarCV\(\)/);
+  assert.match(html, /capture\(paper,\s*\{/);
+  assert.match(html, /pdf\.addImage\(image, "PNG", 0, 0, 210, 297/);
   assert.ok(html.includes('pdf.save("CV-" + filename + ".pdf")'));
-  const download = html.slice(html.indexOf("function descargarCV()"), html.indexOf("function cPerfil()"));
+  const download = html.slice(html.indexOf("async function descargarCV()"), html.indexOf("function cPerfil()"));
   assert.equal(download.includes("window.print"), false);
+  assert.equal(download.includes("paper.innerHTML ="), false, "La descarga no debe alterar el HTML de la preview");
 });
 
-test("la experiencia laboral del PDF se presenta en bloques con jerarquía visual", () => {
-  const download = html.slice(html.indexOf("function descargarCV()"), html.indexOf("function cPerfil()"));
-  assert.match(download, /const experiences = \(data\.experience \|\| \[\]\)/);
-  assert.match(download, /const writeExperience = \(item, index\)/);
-  assert.match(download, /write\(role, 9, "bold"/);
-  assert.match(download, /write\(company, 7\.6, "normal"/);
-  assert.match(download, /write\(dates, 7\.2, "italic"/);
-  assert.match(download, /write\("- " \+ bullet/);
-  assert.match(download, /doc\.line\(margin, y, pageWidth - margin, y\)/);
+test("la preview separa menos el contacto del puesto y más el puesto del perfil", () => {
+  assert.match(html, /\.cv-paper \.cv-contact\{[^}]*margin-bottom:8px/);
+  assert.match(html, /\.cv-paper \.cv-target-role\{margin:0 0 20px\}/);
+  assert.match(html, /class="cv-target-role"/);
+});
+
+
+test("el constructor permite incluir u omitir la foto de perfil en preview y PDF", () => {
+  assert.match(html, /id="cv-include-photo" type="checkbox"/);
+  assert.match(html, /include_photo: !!document\.getElementById\("cv-include-photo"\)\?\.checked/);
+  assert.match(html, /d\.include_photo && p\.photo_url/);
+  assert.match(html, /cv-profile-photo/);
+  assert.match(html, /photo_url: prev\.personal\?\.photo_url \|\| ME\.avatarUrl/);
+  assert.match(html, /include_photo: profile\.include_photo/);
+  assert.match(html, /e\.target\?\.id === "cv-include-photo"/);
+});
+
+
+test("la experiencia laboral de la preview separa puesto, empresa, fechas y tareas", () => {
+  assert.match(html, /class="cv-entry-role"/);
+  assert.match(html, /class="cv-entry-company"/);
+  assert.match(html, /class="cv-entry-dates"/);
+  assert.match(html, /\.cv-entry:not\(:last-child\)\{border-bottom:1px solid #dae2e9\}/);
+  assert.match(html, /\.cv-paper \.cv-entry-role\{display:block/);
+  assert.match(html, /\.cv-paper \.cv-entry-dates\{font-size:9px;font-style:italic/);
+});
+
+test("el estado de descarga no agrega aclaraciones sobre el formato", () => {
+  assert.match(html, /status\) status\.textContent = "Descargando PDF"/);
+  assert.doesNotMatch(html, /PDF A4 descargado con el mismo formato de la vista previa/);
+  assert.doesNotMatch(html, /Preparando el PDF con el mismo diseño de la vista previa/);
+});
+
+test("la opción de foto muestra el texto breve Foto visible", () => {
+  assert.match(html, /\? "Foto visible" : "Primero subí una foto/);
+  assert.doesNotMatch(html, /La foto se toma de tu perfil de Match Empleos/);
+});
+
+test("guardarDatosPerfil confirma la escritura solicitando la fila actualizada", () => {
+  const start = html.indexOf("guardarDatosPerfil(nombre, datos)");
+  const end = html.indexOf("cambiarEstadoBusqueda", start);
+  const saveMethod = html.slice(start, end);
+  assert.match(saveMethod, /\.update\(\{ nombre, datos \}\)\.eq\("id", ME\.id\)\.select\("id"\)\.single\(\)/);
+  assert.match(saveMethod, /if \(!ME\.id\)/);
+});
+
+
+test("la descarga PDF conserva el formato mejorado de experiencia de la preview A4", () => {
+  const download = html.slice(html.indexOf("async function descargarCV()"), html.indexOf("function cPerfil()"));
+  assert.match(html, /class="cv-entry-role"/);
+  assert.match(html, /class="cv-entry-company"/);
+  assert.match(html, /class="cv-entry-dates"/);
+  assert.match(download, /capture\(paper,/);
+  assert.match(download, /pdf\.addImage\(image, "PNG", 0, 0, 210, 297/);
+  assert.match(download, /pdf\.save\("CV-" \+ filename \+ "\.pdf"\)/);
 });

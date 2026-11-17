@@ -3368,8 +3368,13 @@
         .cv-paper h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #aaa;padding-bottom:5px;margin:18px 0 8px;color:#222}
         .cv-paper p,.cv-paper li{font-size:11px;line-height:1.5;margin:3px 0}
         .cv-paper ul{margin:5px 0 8px;padding-left:18px}
-        .cv-paper .cv-entry{margin:7px 0 10px}
-        .cv-paper .cv-entry strong{font-size:11px}
+        .cv-paper .cv-entry{margin:7px 0 10px;padding-bottom:7px}
+        .cv-paper .cv-entry:not(:last-child){border-bottom:1px solid #dae2e9}
+        .cv-paper .cv-entry-role{display:block;font-size:11px;font-weight:700;color:#002147;margin:0 0 2px}
+        .cv-paper .cv-entry-company{font-size:10px;color:#465668;margin:1px 0}
+        .cv-paper .cv-entry-dates{font-size:9px;font-style:italic;color:#0f7a45;margin:1px 0 3px}
+        .cv-paper .cv-entry ul{margin:4px 0 0;padding-left:18px}
+        .cv-paper .cv-entry li{font-size:10px;line-height:1.4;margin:2px 0}
         @media(max-width:640px){.cv-builder .cv-grid{grid-template-columns:1fr}.cv-builder .cv-field.full{grid-column:auto}.cv-paper{padding:24px 20px}}
         @media print{
           @page{size:A4 portrait;margin:10mm}
@@ -4668,7 +4673,7 @@
               ${fields("cv-location","Localidad",p.location)}
               ${fields("cv-linkedin","LinkedIn",p.linkedin)}
               ${fields("cv-portfolio","Portfolio / sitio web",p.portfolio)}
-              <div class="cv-field full"><label for="cv-include-photo"><input id="cv-include-photo" type="checkbox"${d.include_photo && ME.avatarUrl ? " checked" : ""}${ME.avatarUrl ? "" : " disabled"}> Incluir foto de perfil en el CV</label><p class="cv-help">${ME.avatarUrl ? "La foto se toma de tu perfil de Match Empleos." : "Primero subí una foto desde tu perfil para poder incluirla."}</p></div>
+              <div class="cv-field full"><label for="cv-include-photo"><input id="cv-include-photo" type="checkbox"${d.include_photo && ME.avatarUrl ? " checked" : ""}${ME.avatarUrl ? "" : " disabled"}> Incluir foto de perfil en el CV</label><p class="cv-help">${ME.avatarUrl ? "Foto visible" : "Primero subí una foto desde tu perfil para poder incluirla."}</p></div>
               ${fields("cv-role","Puesto objetivo",d.target_role,true)}
               ${fields("cv-summary","Perfil profesional / Sobre mí",d.professional_summary,true,true)}
             </div></section>
@@ -4701,9 +4706,13 @@
           const contact = [p.email, p.phone, p.location, p.linkedin, p.portfolio].filter(Boolean).map(esc).join(" · ");
           const section = (title, body) => body ? `<section><h2>${title}</h2>${body}</section>` : "";
           const exp = (d.experience || []).map((x) => {
-            const head = [x.role, x.company, x.location, x.dates].filter(Boolean).map(esc).join(" · ");
-            const bullets = (x.bullets || []).filter(Boolean);
-            return head || bullets.length ? `<div class="cv-entry"><strong>${head}</strong>${bullets.length ? `<ul>${bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}</div>` : "";
+            const role = String(x.role || "").trim();
+            const company = [x.company, x.location].map((value) => String(value || "").trim()).filter(Boolean).map(esc).join(" · ");
+            const dates = String(x.dates || "").trim();
+            const bullets = (x.bullets || []).map((bullet) => String(bullet || "").trim()).filter(Boolean);
+            return role || company || dates || bullets.length
+              ? `<div class="cv-entry">${role ? `<strong class="cv-entry-role">${esc(role)}</strong>` : ""}${company ? `<div class="cv-entry-company">${company}</div>` : ""}${dates ? `<div class="cv-entry-dates">${esc(dates)}</div>` : ""}${bullets.length ? `<ul>${bullets.map((bullet) => `<li>${esc(bullet)}</li>`).join("")}</ul>` : ""}</div>`
+              : "";
           }).join("");
           const edu = (d.education || []).map((x) => {
             const line = [x.degree, x.institution, x.location, x.dates, x.details].filter(Boolean).map(esc).join(" · ");
@@ -4860,7 +4869,7 @@
             button.disabled = true;
             button.setAttribute("aria-busy", "true");
           }
-          if (status) status.textContent = "Preparando el PDF con el mismo diseño de la vista previa…";
+          if (status) status.textContent = "Descargando PDF";
 
           try {
             if (document.fonts?.ready) await document.fonts.ready;
@@ -4895,7 +4904,7 @@
               creator: "Match Empleos",
             });
             pdf.save("CV-" + filename + ".pdf");
-            if (status) status.textContent = "PDF A4 descargado con el mismo formato de la vista previa.";
+            if (status) status.textContent = "";
           } catch (error) {
             console.error("[cv] No se pudo generar el PDF desde la vista previa:", error);
             if (status) status.textContent = "No pudimos generar el PDF. Intentá nuevamente.";

@@ -3353,7 +3353,10 @@
         .cv-builder .cv-help{font-size:12px;color:var(--t3);line-height:1.5;margin-top:8px}
         .cv-builder .cv-actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 28px}
         .cv-builder .cv-status{font-size:13px;color:var(--t2);min-height:20px;margin:8px 0}
-        .cv-paper{background:#fff;color:#202124;border:1px solid #e5e7eb;border-radius:4px;padding:34px 42px;margin:20px auto;width:100%;max-width:790px;aspect-ratio:210 / 297;height:auto;overflow:hidden;box-shadow:0 4px 22px #0000000d;font-family:Arial,sans-serif}
+        .cv-paper{display:flex;flex-direction:column;background:#fff;color:#202124;border:1px solid #e5e7eb;border-radius:4px;padding:34px 42px;margin:20px auto;width:100%;max-width:790px;aspect-ratio:210 / 297;height:auto;overflow:hidden;box-shadow:0 4px 22px #0000000d;font-family:Arial,sans-serif}
+        .cv-paper .cv-sections{display:flex;flex:1 0 auto;flex-direction:column;justify-content:space-between;min-height:0}
+        .cv-paper .cv-sections>section{flex:0 0 auto;margin:0}
+        .cv-paper .cv-sections>section h2{margin:0 0 7px}
         .cv-paper h1{font-size:25px;letter-spacing:.2px;margin:0 0 6px;color:#111}
         .cv-paper .cv-contact{font-size:11px;color:#444;line-height:1.6;margin-bottom:18px}
         .cv-paper h2{font-size:13px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #aaa;padding-bottom:5px;margin:18px 0 8px;color:#222}
@@ -3381,6 +3384,9 @@
           #cv-paper ul{margin:2pt 0 3pt!important;padding-left:12pt!important}
           #cv-paper .cv-entry{margin:3pt 0 4pt!important}
           #cv-paper .cv-entry strong{font-size:7.5pt!important}
+          #cv-paper .cv-sections{display:flex!important;flex:1 0 auto!important;flex-direction:column!important;justify-content:space-between!important;min-height:0!important}
+          #cv-paper .cv-sections>section{flex:0 0 auto!important;margin:0!important}
+          #cv-paper .cv-sections>section h2{margin:0 0 3pt!important}
         }
 </style>
 </head>
@@ -4701,14 +4707,16 @@
           const list = (arr) => (arr || []).filter(Boolean).length ? `<p>${arr.filter(Boolean).map(esc).join(" · ")}</p>` : "";
           return `<h1>${esc(p.name || "")}</h1><div class="cv-contact">${contact}</div>
             ${d.target_role ? `<p><strong>${esc(d.target_role)}</strong></p>` : ""}
-            ${section("Perfil profesional", d.professional_summary ? `<p>${esc(d.professional_summary)}</p>` : "")}
-            ${section("Experiencia laboral", exp)}
-            ${section("Formación académica", edu)}
-            ${section("Habilidades", list(d.skills))}
-            ${section("Idiomas", list(d.languages))}
-            ${section("Cursos", list(d.courses))}
-            ${section("Certificaciones", list(d.certifications))}
-            ${section("Información adicional", d.additional ? `<p>${esc(d.additional)}</p>` : "")}`;
+            <div class="cv-sections">
+              ${section("Perfil profesional", d.professional_summary ? `<p>${esc(d.professional_summary)}</p>` : "")}
+              ${section("Experiencia laboral", exp)}
+              ${section("Formación académica", edu)}
+              ${section("Habilidades", list(d.skills))}
+              ${section("Idiomas", list(d.languages))}
+              ${section("Cursos", list(d.courses))}
+              ${section("Certificaciones", list(d.certifications))}
+              ${section("Información adicional", d.additional ? `<p>${esc(d.additional)}</p>` : "")}
+            </div>`;
         }
         function cvCritiqueHtml(critique) {
           if (!critique) return "";

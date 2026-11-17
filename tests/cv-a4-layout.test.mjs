@@ -102,3 +102,14 @@ test("guardarDatosPerfil confirma la escritura solicitando la fila actualizada",
   assert.match(saveMethod, /\.update\(\{ nombre, datos \}\)\.eq\("id", ME\.id\)\.select\("id"\)\.single\(\)/);
   assert.match(saveMethod, /if \(!ME\.id\)/);
 });
+
+
+test("la descarga PDF conserva el formato mejorado de experiencia de la preview A4", () => {
+  const download = html.slice(html.indexOf("async function descargarCV()"), html.indexOf("function cPerfil()"));
+  assert.match(html, /class="cv-entry-role"/);
+  assert.match(html, /class="cv-entry-company"/);
+  assert.match(html, /class="cv-entry-dates"/);
+  assert.match(download, /capture\(paper,/);
+  assert.match(download, /pdf\.addImage\(image, "PNG", 0, 0, 210, 297/);
+  assert.match(download, /pdf\.save\("CV-" \+ filename \+ "\.pdf"\)/);
+});

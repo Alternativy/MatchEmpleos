@@ -94,3 +94,11 @@ test("la opción de foto muestra el texto breve Foto visible", () => {
   assert.match(html, /\? "Foto visible" : "Primero subí una foto/);
   assert.doesNotMatch(html, /La foto se toma de tu perfil de Match Empleos/);
 });
+
+test("guardarDatosPerfil confirma la escritura solicitando la fila actualizada", () => {
+  const start = html.indexOf("guardarDatosPerfil(nombre, datos)");
+  const end = html.indexOf("cambiarEstadoBusqueda", start);
+  const saveMethod = html.slice(start, end);
+  assert.match(saveMethod, /\.update\(\{ nombre, datos \}\)\.eq\("id", ME\.id\)\.select\("id"\)\.single\(\)/);
+  assert.match(saveMethod, /if \(!ME\.id\)/);
+});

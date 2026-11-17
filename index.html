@@ -3367,12 +3367,6 @@
         .cv-paper .cv-entry{margin:7px 0 10px}
         .cv-paper .cv-entry strong{font-size:11px}
         @media(max-width:640px){.cv-builder .cv-grid{grid-template-columns:1fr}.cv-builder .cv-field.full{grid-column:auto}.cv-paper{padding:24px 20px}}
-        .cv-critique{max-width:790px;margin:18px auto 40px;padding:20px 24px;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);color:var(--text,#202124)}
-        .cv-critique h2{font-size:17px;margin:0 0 12px}
-        .cv-critique h3{font-size:13px;margin:14px 0 6px}
-        .cv-critique ul{margin:6px 0;padding-left:20px}
-        .cv-critique li,.cv-critique p{font-size:13px;line-height:1.55}
-        .cv-critique .cv-critique-muted{font-size:12px;color:var(--t2);margin-top:10px}
         @media print{
           @page{size:A4 portrait;margin:10mm}
           html,body,#root{width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}
@@ -4136,7 +4130,6 @@
         let cargandoSesion = false;
         let editandoPerfil = false;
         let CV_DRAFT = null;
-        let CV_CRITIQUE = null;
         let EDIT_BACKUP = null; // datos guardados al entrar en edición, para poder cancelar
         // Al cambiar un chip durante la edición se re-renderiza la pantalla: guardar antes lo que ya escribió el usuario
         function snapshotEdicion() {
@@ -4692,7 +4685,6 @@
             <p class="cv-help">Al guardar como PDF en Microsoft Edge, desactivá “Encabezados y pies de página” en Más opciones para evitar que se agreguen la fecha, el nombre del sitio y la URL.</p>
             <p id="cv-status" class="cv-status" role="status"></p>
             <div id="cv-paper" class="cv-paper">${paper}</div>
-            <section id="cv-critique" class="cv-critique" aria-live="polite" ${CV_CRITIQUE ? "" : "hidden"}>${cvCritiqueHtml(CV_CRITIQUE)}</section>
           </div>`;
           return shell("c", "#/c/perfil", inner);
         }
@@ -4723,18 +4715,6 @@
               ${section("Certificaciones", list(d.certifications))}
               ${section("Información adicional", d.additional ? `<p>${esc(d.additional)}</p>` : "")}
             </div>`;
-        }
-        function cvCritiqueHtml(critique) {
-          if (!critique) return "";
-          const list = (items) => Array.isArray(items) && items.length
-            ? `<ul>${items.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>`
-            : "<p>No se identificaron observaciones en este apartado.</p>";
-          return `<h2>Evaluación de tu CV</h2>
-            ${critique.summary ? `<p>${esc(critique.summary)}</p>` : ""}
-            <h3>Fortalezas</h3>${list(critique.strengths)}
-            <h3>Oportunidades de mejora</h3>${list(critique.improvements)}
-            <h3>Criterios Harvard más allá del formato</h3>${list(critique.harvard_criteria)}
-            <p class="cv-critique-muted">La evaluación se basa únicamente en la información que cargaste. No reemplaza la revisión de los datos ni garantiza resultados en una búsqueda laboral.</p>`;
         }
         function cvReadForm() {
           const val = (id) => (document.getElementById(id)?.value || "").trim();
@@ -4804,15 +4784,33 @@
             };
             const { data, error } = await sb.functions.invoke("generar-cv", { body: { profile: apiProfile } });
             if (error) throw error;
-            const result = data?.cv || data?.result || data;
-            if (!result?.personal || !Array.isArray(result.experience) || !Array.isArray(result.education)) {
-              throw new Error(data?.error || "La respuesta del generador no tiene el formato esperado.");
+            if (data?.error) throw new Error(data.error);
+            const result = data?.cv;
+            const arraysRequired = ["experience", "education", "skills", "languages", "ats_keywords"];
+            const validResponse =
+              result?.personal &&
+              typeof result.personal === "object" &&
+              typeof result.personal.name === "string" &&
+              arraysRequired.every((key) => Array.isArray(result[key]));
+            if (!validResponse) {
+              throw new Error("La Edge Function devolvió una respuesta incompleta o con un formato inesperado.");
             }
-            CV_DRAFT = result;
-            CV_CRITIQUE = data?.critique || null;
+            CV_DRAFT = {
+              personal: result.personal,
+              target_role: typeof result.target_role === "string" ? result.target_role : "",
+              professional_summary: typeof result.professional_summary === "string" ? result.professional_summary : "",
+              experience: result.experience,
+              education: result.education,
+              skills: result.skills,
+              languages: result.languages,
+              courses: Array.isArray(result.courses) ? result.courses : [],
+              certifications: Array.isArray(result.certifications) ? result.certifications : [],
+              ats_keywords: result.ats_keywords,
+              additional: typeof result.additional === "string" ? result.additional : "",
+            };
             render(true);
             const s = document.getElementById("cv-status");
-            if (s) s.textContent = "CV generado. Debajo encontrás una evaluación con fortalezas y mejoras concretas. Podés editar, guardar o descargar el documento.";
+            if (s) s.textContent = "CV generado correctamente. Podés editar, guardar o descargar el documento.";
           } catch (err) {
             const s = document.getElementById("cv-status");
             if (s) s.textContent = err?.message || "No pudimos generar el CV. Revisá tu conexión e intentá nuevamente.";

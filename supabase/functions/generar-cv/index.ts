@@ -142,6 +142,7 @@ function profileForAi(profile: NonNullable<ReturnType<typeof normalizeProfile>>)
     name: _name,
     email: _email,
     phone: _phone,
+    location: _location,
     linkedin: _linkedin,
     portfolio: _portfolio,
     ...professionalData

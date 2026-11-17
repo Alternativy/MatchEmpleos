@@ -4857,11 +4857,11 @@
             if (document.fonts?.ready) await document.fonts.ready;
             const canvas = await capture(paper, {
               backgroundColor: "#ffffff",
-              scale: Math.max(2, window.devicePixelRatio || 1),
+              scale: Math.min(3, Math.max(2, window.devicePixelRatio || 1)),
               useCORS: true,
               logging: false,
-              width: paper.scrollWidth,
-              height: paper.scrollHeight,
+              width: paper.clientWidth,
+              height: paper.clientHeight,
               windowWidth: Math.max(document.documentElement.clientWidth, paper.scrollWidth),
             });
 

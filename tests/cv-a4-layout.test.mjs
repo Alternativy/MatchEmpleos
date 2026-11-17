@@ -41,5 +41,5 @@ test("el creador de CV limita y cuenta 4.000 caracteres entre todos los campos",
   assert.match(html, /const CV_TOTAL_CHAR_LIMIT = 4000/);
   assert.match(html, /total > CV_TOTAL_CHAR_LIMIT/);
   assert.match(html, /4\\.000 caracteres en total/);
-  assert.match(html, /cvUpdateCharCounter\\(\\) > CV_TOTAL_CHAR_LIMIT/);
+  assert.match(html, /cvUpdateCharCounter\(\) > CV_TOTAL_CHAR_LIMIT/);
 });

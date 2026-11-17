@@ -44,3 +44,10 @@ test("el creador de CV limita cada campo a 4.000 caracteres y muestra su contado
   assert.match(html, /CV_FIELD_CHAR_LIMIT/);
   assert.doesNotMatch(html, /CV_TOTAL_CHAR_LIMIT|cv-char-counter" id="cv-char-counter"/);
 });
+
+test("la descarga del CV genera un PDF A4 con jsPDF sin usar la impresión del navegador", () => {
+  assert.match(html, /<script src="vendor\\/jspdf\\.umd\\.min\\.js"><\\/script>/);
+  assert.match(html, /new JsPDF\\(\\{ orientation: "portrait", unit: "mm", format: "a4"/);
+  assert.match(html, /pdf\\.save\\("CV-" \\+ filename \\+ "\\.pdf"\\)/);
+  assert.doesNotMatch(html, /function descargarCV\\(\\)[\\s\\S]*?window\\.print\\(\\)/);
+});

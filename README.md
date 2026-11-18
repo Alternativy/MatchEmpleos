@@ -63,3 +63,14 @@ docs/
 - No ejecutar migraciones destructivas ni borrar datos de staging o producción sin revisión, respaldo y autorización.
 - Aplicar y probar cambios SQL primero en staging. Ver [Supabase](docs/SUPABASE.md).
 - Antes de modificar una funcionalidad, leer el documento temático correspondiente y verificar el estado real del código; el historial técnico no sustituye una inspección del código actual.
+
+
+## Generación de CV con IA
+
+- El constructor está disponible en la ruta `#/c/cv` para cuentas de postulante. Permite editar los datos, generar contenido con IA, guardar el CV en el perfil y descargarlo como PDF A4 de una página.
+- La generación utiliza la Edge Function `generar-cv`. Gemini (`gemini-3.5-flash-lite`) es el proveedor principal y Groq (`openai/gpt-oss-120b`) el fallback. Las claves `GEMINI_API_KEY` y `GROQ_API_KEY` deben permanecer en los secrets del proyecto Supabase; nunca en el frontend ni en Git.
+- **Privacidad:** antes de enviar el perfil a los proveedores, la función excluye nombre, correo, teléfono, localidad, LinkedIn y portfolio. El servidor reincorpora esos datos al CV generado. Los datos profesionales necesarios para redactar el documento sí se procesan.
+- La función requiere autenticación (`verify_jwt: true`) y aplica límites de tamaño, frecuencia y tiempo de espera. No habilitar acceso anónimo.
+- Los despliegues existentes de `generar-cv` son independientes del código del repositorio: staging v4 y producción v1, ambos con JWT obligatorio. Un cambio en esta rama no modifica esos despliegues.
+- La respuesta también contiene una crítica estructurada del CV (`critique`); su presentación en la interfaz no está incluida todavía.
+- El constructor mantiene una preview A4 vertical. La descarga usa jsPDF local (`vendor/jspdf.umd.min.js`) y html2canvas; no utiliza la impresión del navegador. La foto de perfil es opcional y se controla desde el checkbox del editor.

@@ -128,3 +128,17 @@ test("los datos personales identificables no se envían a proveedores de IA", ()
   }
   assert.match(sanitizer, /\.\.\.professionalData/);
 });
+
+
+test("la descarga normaliza la foto para conservar su proporción en el PDF", () => {
+  const start = html.indexOf("async function descargarCV()");
+  const end = html.indexOf("function cPerfil()", start);
+  const download = html.slice(start, end);
+  assert.match(download, /paper\.querySelector\("\.cv-profile-photo"\)/);
+  assert.match(download, /const side = Math\.min\(photo\.naturalWidth, photo\.naturalHeight\)/);
+  assert.match(download, /photoContext\.drawImage\(photo, sx, sy, side, side, 0, 0, 512, 512\)/);
+  assert.match(download, /photo\.style\.objectFit = "fill"/);
+  assert.match(download, /photoOriginal\.src/);
+  assert.match(download, /photoOriginal\.style/);
+  assert.match(download, /photo\.setAttribute\("src", photoOriginal\.src\)/);
+});

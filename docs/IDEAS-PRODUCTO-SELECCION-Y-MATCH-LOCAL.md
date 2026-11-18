@@ -236,22 +236,7 @@ Estos son nombres orientativos, no un esquema aprobado ni migraciones para ejecu
 
 Antes de implementar, revisar el esquema existente para reutilizar tablas y relaciones cuando corresponda. No crear entidades duplicadas ni ejecutar migraciones basándose solamente en esta propuesta.
 
-## 8. Modelo comercial a validar
-
-### Planes para empresas
-
-| Plan conceptual | Posible alcance |
-|---|---|
-| Local Gratis | Un comercio, QR permanente y recepción de perfiles |
-| Local Plus | Base de talentos, filtros, etiquetas y alertas |
-| Multi Local | Varias sucursales, administración compartida y matching |
-| Business / Enterprise | ATS avanzado, colaboración, automatizaciones e integraciones |
-
-La monetización podría combinar suscripciones recurrentes con funcionalidades premium. No se definieron precios ni límites: deben validarse mediante entrevistas y pruebas de disposición a pagar.
-
-Una hipótesis comercial importante es que Match Local funcione como puerta de entrada al ecosistema: un comercio empieza recibiendo perfiles por QR y, cuando necesita cubrir una vacante, utiliza publicación de búsquedas, matching y ATS.
-
-## 9. Benchmark competitivo inicial
+## 8. Benchmark competitivo inicial
 
 El relevamiento exploratorio de esta conversación identificó productos que conviene estudiar:
 
@@ -284,7 +269,7 @@ Referencias consultadas durante el relevamiento:
 
 Este benchmark es exploratorio, no una auditoría exhaustiva ni una confirmación de que todas las funciones estén disponibles en todos los planes. Antes de tomar decisiones, verificar producto, disponibilidad geográfica, precios y condiciones vigentes. La existencia de competidores demuestra que el problema ya tiene soluciones; la oportunidad está en encontrar una experiencia mejor integrada y adaptada al comercio pequeño.
 
-## 10. Posicionamiento estratégico propuesto
+## 9. Posicionamiento estratégico propuesto
 
 Tres espacios posibles:
 
@@ -298,7 +283,7 @@ Para el segmento de pequeños comercios, el posicionamiento específico podría 
 
 La diferenciación no debería ser solamente “un QR para recibir CV”, porque ya existen propuestas similares. La oportunidad está en conectar el QR con un perfil reutilizable, una base de talento local, matching y futuras búsquedas.
 
-## 11. Priorización sugerida
+## 10. Priorización sugerida
 
 ### Etapa 1 — Validar Match Local
 
@@ -333,7 +318,7 @@ La diferenciación no debería ser solamente “un QR para recibir CV”, porque
 - Ofertas laborales.
 - Firma y onboarding.
 
-## 12. Piloto de validación
+## 11. Piloto de validación
 
 Propuesta inicial: piloto con 15 a 20 comercios de una zona acotada, por ejemplo Burzaco y Adrogué, durante 30 días.
 
@@ -349,11 +334,10 @@ Indicadores:
 - Entrevistas generadas.
 - Contrataciones atribuibles al canal.
 - Comercios que desean continuar utilizando el servicio.
-- Disposición a pagar por el servicio.
 
 No tomar la cantidad de escaneos como único indicador de éxito: el objetivo es comprobar que el canal produce perfiles utilizables y ayuda a cubrir necesidades reales de personal.
 
-## 13. Privacidad, seguridad y uso responsable de IA
+## 12. Privacidad, seguridad y uso responsable de IA
 
 Toda implementación debe contemplar:
 
@@ -368,7 +352,7 @@ Toda implementación debe contemplar:
 - Explicar criterios del matching y permitir revisión humana.
 - Revisar los proveedores externos y los datos enviados a sus APIs.
 
-## 14. Decisiones pendientes
+## 13. Decisiones pendientes
 
 Antes de iniciar el desarrollo, producto debería resolver:
 
@@ -378,9 +362,8 @@ Antes de iniciar el desarrollo, producto debería resolver:
 4. ¿Durante cuánto tiempo se conserva una postulación espontánea?
 5. ¿El candidato puede autorizar que otros comercios de la red lo encuentren?
 6. ¿Cómo se gestionan múltiples sucursales y permisos de sus empleados?
-7. ¿Qué límites tendrá el plan gratuito y qué funciones serán pagas?
-8. ¿Qué parte del proceso de digitalización de CV se automatiza y cuál requiere confirmación del comerciante?
-9. ¿Qué indicadores determinarán si el piloto justifica continuar?
+7. ¿Qué parte del proceso de digitalización de CV se automatiza y cuál requiere confirmación del comerciante?
+8. ¿Qué indicadores determinarán si el piloto justifica continuar?
 
 ---
 

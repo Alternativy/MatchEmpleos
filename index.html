@@ -4880,8 +4880,45 @@
           }
           if (status) status.textContent = "Descargando PDF";
 
+          let photo = null;
+          let photoOriginal = null;
           try {
             if (document.fonts?.ready) await document.fonts.ready;
+
+            // html2canvas no reproduce de forma consistente object-fit: cover.
+            // Se rasteriza la foto con el mismo recorte cuadrado de la preview
+            // para que el PDF no estire la imagen ni cambie su encuadre.
+            photo = paper.querySelector(".cv-profile-photo");
+            if (photo) {
+              photoOriginal = {
+                src: photo.getAttribute("src"),
+                style: photo.getAttribute("style"),
+              };
+              if (!photo.complete) {
+                await new Promise((resolve, reject) => {
+                  photo.addEventListener("load", resolve, { once: true });
+                  photo.addEventListener("error", reject, { once: true });
+                });
+              }
+              if (!photo.naturalWidth || !photo.naturalHeight) {
+                throw new Error("La foto de perfil no pudo cargarse para el PDF.");
+              }
+              const side = Math.min(photo.naturalWidth, photo.naturalHeight);
+              const sx = (photo.naturalWidth - side) / 2;
+              const sy = (photo.naturalHeight - side) / 2;
+              const photoCanvas = document.createElement("canvas");
+              photoCanvas.width = 512;
+              photoCanvas.height = 512;
+              const photoContext = photoCanvas.getContext("2d");
+              if (!photoContext) throw new Error("No se pudo preparar la foto de perfil.");
+              photoContext.imageSmoothingEnabled = true;
+              photoContext.imageSmoothingQuality = "high";
+              photoContext.drawImage(photo, sx, sy, side, side, 0, 0, 512, 512);
+              photo.src = photoCanvas.toDataURL("image/png");
+              photo.style.objectFit = "fill";
+              if (photo.decode) await photo.decode();
+            }
+
             const canvas = await capture(paper, {
               backgroundColor: "#ffffff",
               scale: Math.min(3, Math.max(2, window.devicePixelRatio || 1)),
@@ -4918,6 +4955,12 @@
             console.error("[cv] No se pudo generar el PDF desde la vista previa:", error);
             if (status) status.textContent = "No pudimos generar el PDF. Intentá nuevamente.";
           } finally {
+            if (photo && photoOriginal) {
+              if (photoOriginal.src === null) photo.removeAttribute("src");
+              else photo.setAttribute("src", photoOriginal.src);
+              if (photoOriginal.style === null) photo.removeAttribute("style");
+              else photo.setAttribute("style", photoOriginal.style);
+            }
             if (button?.isConnected) {
               button.disabled = false;
               button.removeAttribute("aria-busy");

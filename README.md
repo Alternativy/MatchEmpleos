@@ -13,7 +13,7 @@ La documentación está separada por tema para que personas y agentes puedan con
 | [Testing](docs/TESTING.md) | Pruebas locales, GitHub Actions y flujo de ramas con Netlify Deploy Previews |
 | [Reglas para agentes de IA](docs/AGENTES-IA.md) | Instrucciones que deben respetar los agentes al modificar el proyecto |
 | [Publicación](docs/PUBLICACION.md) | Pendientes y requisitos antes de publicar cambios |
-| [Historial técnico](docs/HISTORIAL-TECNICO.md) | Registro de auditorías, cambios y decisiones técnicas |
+| [Historial técnico](docs/HISTORIAL-TECNICO.md) | Registro de auditorías, cambios y decisiones técnicas |\n| [Ideas de producto: selección y Match Local](docs/IDEAS-PRODUCTO-SELECCION-Y-MATCH-LOCAL.md) | Propuestas de ATS, IA, matching, contratación y recepción digital de CV para comercios |
 
 ## Resumen del stack
 

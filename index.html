@@ -2413,6 +2413,140 @@
           color: var(--green);
           white-space: nowrap;
         }
+        .landing-v2 .lp-ad-wrap {
+          position: absolute;
+          left: calc(82 * var(--u));
+          top: calc(382 * var(--u));
+          width: calc(510 * var(--u));
+          min-height: calc(154 * var(--u));
+          z-index: 3;
+        }
+        .landing-v2 .lp-ad-banner {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: calc(14 * var(--u));
+          width: 100%;
+          min-height: calc(154 * var(--u));
+          padding: calc(14 * var(--u)) calc(42 * var(--u)) calc(14 * var(--u)) calc(16 * var(--u));
+          overflow: hidden;
+          border: 1px solid #28231f;
+          border-radius: calc(5 * var(--u));
+          background: #fffdf8;
+          color: #211f1c;
+          text-decoration: none;
+          box-shadow: 0 calc(5 * var(--u)) calc(15 * var(--u)) rgba(27,22,16,.12);
+          transition: transform .2s, box-shadow .2s;
+        }
+        .landing-v2 .lp-ad-banner::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto;
+          height: calc(4 * var(--u));
+          background: linear-gradient(90deg,#171717 0 28%,#d84b40 28% 40%,#e7b83c 40% 52%,#269b9b 52% 64%,#6b5a9c 64% 76%,#171717 76%);
+        }
+        .landing-v2 .lp-ad-banner:hover {
+          transform: translateY(calc(-2 * var(--u)));
+          box-shadow: 0 calc(9 * var(--u)) calc(20 * var(--u)) rgba(27,22,16,.17);
+        }
+        .landing-v2 .lp-ad-banner .lp-ad-logo {
+          position: relative;
+          flex: 0 0 auto;
+          align-self: flex-end;
+          display: block;
+          width: calc(88 * var(--u));
+          height: calc(64 * var(--u));
+          margin: 0 0 calc(-14 * var(--u));
+          object-fit: contain;
+          border-radius: 0;
+          mix-blend-mode: multiply;
+        }
+        .landing-v2 .lp-ad-banner .lp-ad-product {
+          position: relative;
+          flex: 0 0 auto;
+          width: auto;
+          height: calc(140 * var(--u));
+          max-width: calc(184 * var(--u));
+          object-fit: contain;
+          object-position: center bottom;
+          align-self: flex-end;
+          margin: 0 0 calc(-14 * var(--u)) auto;
+          transition: opacity .22s ease;
+          mix-blend-mode: multiply;
+        }
+        .landing-v2 .lp-ad-copy {
+          display: flex;
+          flex-direction: column;
+          gap: calc(5 * var(--u));
+          min-width: 0;
+          text-align: left;
+        }
+        .landing-v2 .lp-ad-brand {
+          font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
+          font-stretch: condensed;
+          font-size: calc(13 * var(--u));
+          font-weight: 800;
+          letter-spacing: .09em;
+          text-transform: uppercase;
+        }
+        .landing-v2 .lp-ad-copy strong {
+          font-family: Impact, Haettenschweiler, "Arial Narrow Bold", "Arial Black", sans-serif;
+          font-size: calc(48 * var(--u));
+          line-height: .9;
+          font-weight: 400;
+          letter-spacing: -.05em;
+          text-transform: uppercase;
+        }
+        .landing-v2 .lp-ad-copy .lp-ad-headline-line {
+          white-space: nowrap;
+          font: inherit;
+          letter-spacing: inherit;
+          color: inherit;
+          font-style: normal;
+        }
+        .landing-v2 .lp-ad-copy span {
+          color: #25211d;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: calc(19 * var(--u));
+          line-height: 1.2;
+          font-style: italic;
+        }
+        .landing-v2 .lp-ad-close {
+          position: absolute;
+          top: calc(7 * var(--u));
+          right: calc(7 * var(--u));
+          display: grid;
+          place-items: center;
+          width: calc(21 * var(--u));
+          height: calc(21 * var(--u));
+          padding: 0;
+          border: 1px solid #292521;
+          border-radius: 50%;
+          background: #fffdf8;
+          color: #292521;
+          font-size: calc(12 * var(--u));
+          line-height: 1;
+          cursor: pointer;
+        }
+        .landing-v2 .lp-ad-close:hover { background: #292521; color: #fffdf8; }
+        .landing-v2 .lp-ad-countdown {
+          position: absolute;
+          top: calc(7 * var(--u));
+          right: calc(7 * var(--u));
+          display: grid;
+          place-items: center;
+          width: calc(21 * var(--u));
+          height: calc(21 * var(--u));
+          border: 1px solid #292521;
+          border-radius: 50%;
+          background: #fffdf8;
+          color: #292521;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: calc(11 * var(--u));
+          font-weight: 700;
+          font-variant-numeric: tabular-nums;
+        }
+        .landing-v2 .lp-ad-close[hidden],.landing-v2 .lp-ad-countdown[hidden] { display: none; }
         .landing-v2 .lp-scroll {
           left: calc(81 * var(--u));
           top: calc(709.7 * var(--u));
@@ -2941,6 +3075,104 @@
           font-size: clamp(17px, 4.4vw, 24px);
           color: var(--green);
         }
+        .landing-v2 .lp-ad-wrap {
+          position: relative;
+          width: min(100%, 460px);
+          margin-top: 20px;
+        }
+        .landing-v2 .lp-ad-banner {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+          min-height: 126px;
+          padding: 14px 40px 14px 10px;
+          border: 1px solid #28231f;
+          border-radius: 5px;
+          background: #fffdf8;
+          color: #211f1c;
+          text-decoration: none;
+          box-shadow: 0 5px 15px rgba(27,22,16,.12);
+          overflow: hidden;
+        }
+        .landing-v2 .lp-ad-banner::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto;
+          height: 4px;
+          background: linear-gradient(90deg,#171717 0 28%,#d84b40 28% 40%,#e7b83c 40% 52%,#269b9b 52% 64%,#6b5a9c 64% 76%,#171717 76%);
+        }
+        .landing-v2 .lp-ad-banner .lp-ad-logo {
+          position: relative;
+          flex: 0 0 auto;
+          align-self: flex-end;
+          display: block;
+          width: 62px;
+          height: 44px;
+          margin: 0 0 -14px;
+          object-fit: contain;
+          mix-blend-mode: multiply;
+        }
+        .landing-v2 .lp-ad-banner .lp-ad-product {
+          position: relative;
+          flex: 0 0 auto;
+          width: auto;
+          height: 112px;
+          max-width: 156px;
+          object-fit: contain;
+          object-position: center bottom;
+          align-self: flex-end;
+          margin: 0 0 -14px auto;
+          transition: opacity .22s ease;
+          mix-blend-mode: multiply;
+        }
+        .landing-v2 .lp-ad-copy {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          min-width: 0;
+          text-align: left;
+        }
+        .landing-v2 .lp-ad-brand {
+          font-family: "Arial Narrow", "Roboto Condensed", sans-serif;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+        .landing-v2 .lp-ad-copy strong {
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: clamp(20px, 5.2vw, 27px);
+          line-height: 1.04;
+          font-weight: 700;
+          letter-spacing: -.035em;
+        }
+        .landing-v2 .lp-ad-copy span {
+          color: #25211d;
+          font-family: Georgia, "Times New Roman", serif;
+          font-size: clamp(15px, 3.8vw, 18px);
+          line-height: 1.2;
+          font-style: italic;
+        }
+        .landing-v2 .lp-ad-close,.landing-v2 .lp-ad-countdown {
+          position: absolute;
+          top: 7px;
+          right: 7px;
+          display: grid;
+          place-items: center;
+          width: 21px;
+          height: 21px;
+          padding: 0;
+          border: 1px solid #292521;
+          border-radius: 50%;
+          background: #fffdf8;
+          color: #292521;
+          font-size: 11px;
+          line-height: 1;
+          font-weight: 700;
+        }
+        .landing-v2 .lp-ad-close { cursor: pointer; }
+        .landing-v2 .lp-ad-close[hidden],.landing-v2 .lp-ad-countdown[hidden] { display: none; }
         .landing-v2 .lp-hero-art {
           width: min(62%, 300px);
           margin: 18px 0 0 auto;
@@ -3447,6 +3679,15 @@
               <div class="lp-panel">
                 <h1>Bienvenido a Match Empleos</h1>
                 <p>Tu próxima oportunidad empieza con un MATCH</p>
+                <div class="lp-ad-wrap" data-lp-ad-wrap>
+                  <a class="lp-ad-banner" href="https://www.opticareyesbsas.com/" target="_blank" rel="noopener noreferrer" aria-label="No ves la X? Visitá Óptica Reyes Bs. As.">
+                    <span class="lp-ad-copy"><small class="lp-ad-brand">Óptica Reyes Bs. As.</small><strong><span class="lp-ad-headline-line">No ves la</span><br>X?</strong><span>Visitá Óptica Reyes</span></span>
+                    <img class="lp-ad-product" src="img/no-ve.png" alt="Persona con dificultad para ver, representando el problema visual." width="112" height="112">
+                    <img class="lp-ad-logo" src="img/optica-reyes-2.jpg" alt="Logo de Óptica Reyes Bs. As." width="118" height="118">
+                  </a>
+                  <span class="lp-ad-countdown" data-lp-ad-countdown aria-live="off">5</span>
+                  <button class="lp-ad-close" type="button" data-lp-ad-close aria-label="Cerrar anuncio" hidden>×</button>
+                </div>
                 <img class="lp-hero-art" src="img/seniala-celular.png" alt="Dos jóvenes mirando juntos un celular" width="351" height="380">
                 <button class="lp-scroll" type="button" data-scroll="quienes">¡Deslizá para conocer más!</button>
               </div>
@@ -5717,11 +5958,55 @@ async function toggleBusqueda(id) {
             landingRevealObserver.observe(block);
           });
         }
+        let lpAdCountdownInterval = null;
+        let lpAdImageSwapTimeout = null;
+        function initLandingAdBanner() {
+          clearInterval(lpAdCountdownInterval);
+          clearTimeout(lpAdImageSwapTimeout);
+          const wrap = document.querySelector("[data-lp-ad-wrap]");
+          if (!wrap) return;
+          const countdown = wrap.querySelector("[data-lp-ad-countdown]");
+          const close = wrap.querySelector("[data-lp-ad-close]");
+          const product = wrap.querySelector(".lp-ad-product");
+          const startedAt = Date.now();
+          const solutionImage = new Image();
+          solutionImage.src = "veo-feliz-ad.png";
+          let imageSwapped = false;
+          const update = () => {
+            const elapsed = Date.now() - startedAt;
+            const remaining = Math.max(0, 5 - Math.floor(elapsed / 1000));
+            if (countdown) countdown.textContent = String(remaining);
+            if (remaining <= 0) {
+              clearInterval(lpAdCountdownInterval);
+              if (!imageSwapped && product) {
+                imageSwapped = true;
+                product.style.opacity = "0";
+                lpAdImageSwapTimeout = setTimeout(() => {
+                  if (!product.isConnected) return;
+                  product.src = solutionImage.src;
+                  product.alt = "Hombre con anteojos y expresión relajada, representando la solución para ver mejor.";
+                  product.style.opacity = "1";
+                }, 220);
+              }
+              if (countdown) countdown.hidden = true;
+              if (close) close.hidden = false;
+            }
+          };
+          if (close) close.addEventListener("click", () => {
+            wrap.remove();
+            clearInterval(lpAdCountdownInterval);
+            clearTimeout(lpAdImageSwapTimeout);
+          }, { once: true });
+          update();
+          if (Date.now() - startedAt < 5000) lpAdCountdownInterval = setInterval(update, 200);
+        }
+
         function render(keepScroll) {
           document.title = titleFor(location.hash);
           const y = window.scrollY;
           root.innerHTML = route() + reportModal();
           initLandingReveal();
+          initLandingAdBanner();
           ["rg", "rc", "re"].forEach((pfx) => {
             if (
               document.getElementById(pfx + "-mail") &&

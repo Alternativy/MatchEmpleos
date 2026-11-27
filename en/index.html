@@ -7529,7 +7529,7 @@ async function toggleBusqueda(id) {
         // translated again (e.g. "Sign up" must not be changed by the "Si" entry).
         const translationMap=new Map(entries);
         // Match original Spanish text once; never reprocess translated output.
-        const escapeRegex=source=>source.split("").map(char=>".^$*+?()[]{}|\\\".includes(char)?"\\"+char:char).join("");
+        const escapeRegex=source=>source.split("").map(char=>".^$*+?()[]{}|\\".includes(char)?"\\"+char:char).join("");
         const patternSource=source=>{const escaped=escapeRegex(source);return /^[\p{L}\p{N}]+$/u.test(source)?`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`:escaped;};
         const translationPattern=new RegExp(entries.map(([source])=>patternSource(source)).join("|"),"gu");
         function translate(value){

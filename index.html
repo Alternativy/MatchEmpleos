@@ -4322,11 +4322,11 @@
           </div>`;
         }
         function navCuenta() {
-          if (!ME.id) return `<nav aria-label="Cuenta"><a href="#/login">Iniciar sesión</a>${headerLocaleSwitcher()}<a href="#/registro">Registrarse</a></nav>`;
+          if (!ME.id) return `<nav aria-label="Cuenta"><a href="#/login">Iniciar sesión</a><a href="#/registro">Registrarse</a>${headerLocaleSwitcher()}</nav>`;
           const emp = ME.rol === "e";
           const to = emp ? "#/e/panel" : "#/c/feed";
           const img = ME.avatarUrl || phSrc();
-          return `<nav aria-label="Cuenta"><a href="${emp ? "#/e/salir" : "#/c/salir"}">Cerrar sesión</a>${headerLocaleSwitcher()}<a href="${to}" class="top-av" aria-label="Ir a ${emp ? "el panel" : "el feed"}"><img loading="lazy" decoding="async" src="${img}" alt="" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:#fff;display:block"></a></nav>`;
+          return `<nav aria-label="Cuenta"><a href="${emp ? "#/e/salir" : "#/c/salir"}">Cerrar sesión</a><a href="${to}" class="top-av" aria-label="Ir a ${emp ? "el panel" : "el feed"}"><img loading="lazy" decoding="async" src="${img}" alt="" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:#fff;display:block"></a>${headerLocaleSwitcher()}</nav>`;
         }
         function home() {
           const t = document.createElement("template");

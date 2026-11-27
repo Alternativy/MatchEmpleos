@@ -43,6 +43,12 @@ Las traducciones iniciales podrán generarse con IA. La revisión y corrección 
 - Renaming del logo: reemplazar la denominación visual actual por **MatchJobs** en una etapa posterior. El logo gráfico no se modifica en esta implementación.
 - La versión portuguesa (`/pt/`) sigue pendiente. Su opción permanece deshabilitada en el selector hasta que esté disponible.
 
+## Páginas traducidas al inglés
+
+- [x] Términos y Condiciones: traducidos en la versión inglesa para la página pública y el acceso desde los paneles de postulantes y empresas.
+- [x] Centro de Ayuda: traducido en la versión inglesa para la página pública y el acceso desde los paneles de postulantes y empresas.
+- [ ] Revisión editorial y legal de las traducciones antes de considerarlas versiones definitivas.
+
 ## Pendientes de implementación y verificación
 
 - [ ] Verificar por qué el Deploy Preview actual del PR #23 no refleja de forma visible la corrección del footer: `2026 - Match Empleos - All rights reserved.`. El texto ya está presente en `en/index.html` de la rama `localizacion`; falta comprobar que Netlify haya publicado el commit más reciente y descartar caché del navegador/CDN.

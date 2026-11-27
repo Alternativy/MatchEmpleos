@@ -7,7 +7,7 @@ const spec = await readFile(new URL("../docs/requisitos-localizacion.md", import
 test("la especificación conserva la URL y el comportamiento actuales del español", () => {
   assert.match(spec, /versión en español conservará su URL actual/i);
   assert.match(spec, /no cambiará su comportamiento de navegación/i);
-  assert.match(spec, /La versión española conservará su comportamiento SEO actual/i);
+  assert.match(spec, /La página española conservará su comportamiento SEO actual/i);
 });
 
 test("la especificación exige prefijos de idioma en producción y en previews", () => {
@@ -42,7 +42,6 @@ test("la especificación incluye criterios de aceptación verificables", () => {
     assert.ok(spec.includes(criterion), `Falta criterio de aceptación: ${criterion}`);
   }
 });
-
 
 const englishPage = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
 

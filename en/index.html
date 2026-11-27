@@ -7204,6 +7204,15 @@ async function toggleBusqueda(id) {
           });
         })();
 
+        // Keep every hash-based app navigation inside the English locale.
+        // The root <base href="/"> otherwise resolves links such as #/login to /.
+        document.addEventListener("click", (event) => {
+          const link = event.target.closest('a[href^="#/"]');
+          if (!link || link.hasAttribute("data-scroll")) return;
+          event.preventDefault();
+          location.assign("/en/" + link.getAttribute("href"));
+        }, true);
+
         let ultimoUid = undefined;
         render();
         sb.auth.onAuthStateChange((evento, session) => {

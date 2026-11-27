@@ -7120,47 +7120,25 @@ async function toggleBusqueda(id) {
         }
         document.addEventListener("db-error", () => toast("No se pudo guardar. Revisá tu conexión."));
 
-        /* Localización: selector global y traducción incremental de textos de interfaz */
+        /* Selector de idioma: UI únicamente, sin traducciones de contenido */
         (function initLocaleSwitcher(){
           if(document.querySelector(".locale-switcher")) return;
-          const localeNames={es:"Español",en:"English",pt:"Português"};
-          const translations={
-            en:{"Iniciar sesión":"Log in","Registrarse":"Sign up","Bienvenido a Match Empleos":"Welcome to Match Empleos","Tu próxima oportunidad empieza con un MATCH":"Your next opportunity starts with a MATCH","¡Deslizá para conocer más!":"Scroll to learn more!","¿Quiénes somos?":"Who are we?","Cómo funciona":"How it works","Nuestro futuro":"Our future","Seguinos en:":"Follow us:","Buscar":"Search","Match":"Match","Postulaciones":"Applications","Mensajes":"Messages","Notificaciones":"Notifications","Perfil":"Profile","Cerrar sesión":"Log out","Candidatos":"Candidates","Búsquedas":"Job listings","Iniciar sesión en MATCH EMPLEOS":"Log in to MATCH EMPLEOS","Crear cuenta":"Create account","Guardar cambios":"Save changes","Cancelar":"Cancel","Volver":"Back","Continuar":"Continue","Descargar":"Download","Crea tu CV":"Create your CV","Mejorar con IA":"Improve with AI"},
-            pt:{"Iniciar sesión":"Entrar","Registrarse":"Cadastrar-se","Bienvenido a Match Empleos":"Bem-vindo ao Match Empleos","Tu próxima oportunidad empieza con un MATCH":"Sua próxima oportunidade começa com um MATCH","¡Deslizá para conocer más!":"Deslize para saber mais!","¿Quiénes somos?":"Quem somos?","Cómo funciona":"Como funciona","Nuestro futuro":"Nosso futuro","Seguinos en:":"Siga-nos:","Buscar":"Buscar","Match":"Match","Postulaciones":"Candidaturas","Mensajes":"Mensagens","Notificaciones":"Notificações","Perfil":"Perfil","Cerrar sesión":"Sair","Candidatos":"Candidatos","Búsquedas":"Vagas","Iniciar sesión en MATCH EMPLEOS":"Entrar no MATCH EMPLEOS","Crear cuenta":"Criar conta","Guardar cambios":"Salvar alterações","Cancelar":"Cancelar","Volver":"Voltar","Continuar":"Continuar","Descargar":"Baixar","Crea tu CV":"Crie seu CV","Mejorar con IA":"Melhorar com IA"}
-          };
           const root=document.createElement("div");
           root.className="locale-switcher";
           root.innerHTML='<button class="locale-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma"><svg class="locale-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></svg><span class="locale-current">ES</span><span class="locale-chevron" aria-hidden="true">▾</span></button><div class="locale-menu" role="listbox" aria-label="Idioma" hidden><button class="locale-option" type="button" data-locale="es" role="option"><span>Español</span><span class="locale-code">ES</span></button><button class="locale-option" type="button" data-locale="en" role="option"><span>English</span><span class="locale-code">EN</span></button><button class="locale-option" type="button" data-locale="pt" role="option"><span>Português</span><span class="locale-code">PT</span></button></div>';
           document.body.appendChild(root);
           const trigger=root.querySelector(".locale-trigger"),menu=root.querySelector(".locale-menu"),current=root.querySelector(".locale-current");
-          const originals=new WeakMap();let locale="es",busy=false;
-          try{const saved=localStorage.getItem("me-locale");if(["es","en","pt"].includes(saved))locale=saved;}catch(_){}
-          function translateTextNodes(){
-            if(busy)return;busy=true;
-            const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
-            let node;
-            while((node=walker.nextNode())){
-              if(root.contains(node)||!node.nodeValue.trim())continue;
-              if(!originals.has(node))originals.set(node,node.nodeValue);
-              const original=originals.get(node),clean=original.trim();
-              const translated=(translations[locale]||{})[clean];
-              if(translated){const next=original.replace(clean,translated);if(node.nodeValue!==next)node.nodeValue=next;}
-              else if(locale==="es")node.nodeValue=original;
-            }
-            busy=false;
-          }
-          function setLocale(next){
-            locale=next;current.textContent=next.toUpperCase();document.documentElement.lang=next==="es"?"es-AR":next==="pt"?"pt":"en";
-            root.querySelectorAll(".locale-option").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.locale===next)));
-            try{localStorage.setItem("me-locale",next);}catch(_){}
-            translateTextNodes();menu.hidden=true;trigger.setAttribute("aria-expanded","false");
-          }
+          let selected="es";
           trigger.addEventListener("click",()=>{menu.hidden=!menu.hidden;trigger.setAttribute("aria-expanded",String(!menu.hidden));});
-          root.querySelectorAll("[data-locale]").forEach(b=>b.addEventListener("click",()=>setLocale(b.dataset.locale)));
-          document.addEventListener("click",e=>{if(!root.contains(e.target)){menu.hidden=true;trigger.setAttribute("aria-expanded","false");}});
-          document.addEventListener("keydown",e=>{if(e.key==="Escape"){menu.hidden=true;trigger.setAttribute("aria-expanded","false");trigger.focus();}});
-          const observer=new MutationObserver(()=>translateTextNodes());observer.observe(document.body,{childList:true,subtree:true,characterData:true});
-          setLocale(locale);
+          root.querySelectorAll("[data-locale]").forEach(button=>button.addEventListener("click",()=>{
+            selected=button.dataset.locale;
+            current.textContent=selected.toUpperCase();
+            root.querySelectorAll(".locale-option").forEach(option=>option.setAttribute("aria-selected",String(option.dataset.locale===selected)));
+            menu.hidden=true;
+            trigger.setAttribute("aria-expanded","false");
+          }));
+          document.addEventListener("click",event=>{if(!root.contains(event.target)){menu.hidden=true;trigger.setAttribute("aria-expanded","false");}});
+          document.addEventListener("keydown",event=>{if(event.key==="Escape"){menu.hidden=true;trigger.setAttribute("aria-expanded","false");trigger.focus();}});
         })();
 
         let ultimoUid = undefined;

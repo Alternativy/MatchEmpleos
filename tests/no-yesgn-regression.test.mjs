@@ -39,7 +39,7 @@ test("el selector de idioma queda excluido del traductor automático", async () 
 test("el escape de expresiones regulares no invalida el traductor en modo Unicode", async () => {
   const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
   const backslash = String.fromCharCode(92);
-  const line = html.slice(html.indexOf("escapeRegex=source=>"), html.indexOf("\\n", html.indexOf("escapeRegex=source=>")));
+  const line = html.slice(html.indexOf("escapeRegex=source=>"), html.indexOf("\n", html.indexOf("escapeRegex=source=>")));
   assert.ok(line.includes("|" + backslash + backslash + '".includes(char)'));
   const escapeRegex = source => source.split("").map(char =>
     (".^$*+?()[]{}|" + backslash).includes(char) ? backslash + char : char

@@ -2414,6 +2414,8 @@
           align-items: center;
           gap: calc(61 * var(--u));
         }
+        .landing-v2 .lp-header nav .locale-switcher{position:relative;top:auto;right:auto;margin:0;flex:none}
+        .landing-v2 .lp-header nav .locale-trigger{min-height:42px;padding:0 12px;background:var(--navy2);color:var(--white)}
         .landing-v2 .lp-header nav a {
           color: var(--gray);
           font-size: calc(20 * var(--u));
@@ -3519,6 +3521,10 @@
             <nav aria-label="Cuenta" class="lp-account">
               <a href="#/login">Iniciar sesión</a>
               <a href="#/registro">Sign up</a>
+              <div class="locale-switcher">
+                <button class="locale-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma"><svg class="locale-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></svg><span class="locale-current">EN</span><span class="locale-chevron" aria-hidden="true">▾</span></button>
+                <div class="locale-menu" role="listbox" aria-label="Idioma" hidden><button class="locale-option" type="button" data-locale="es" role="option"><span>Español</span><span class="locale-code">ES</span></button><button class="locale-option" type="button" data-locale="en" role="option" aria-selected="true"><span>English</span><span class="locale-code">EN</span></button></div>
+              </div>
 
             </nav>
           </header>
@@ -3641,10 +3647,7 @@
                   matchempleos@gmail.com
                 </a>
               </div>
-              <div class="lp-footer-locale"><div class="locale-switcher">
-                <button class="locale-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma"><svg class="locale-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></svg><span class="locale-current">EN</span><span class="locale-chevron" aria-hidden="true">▾</span></button>
-                <div class="locale-menu" role="listbox" aria-label="Idioma" hidden><button class="locale-option" type="button" data-locale="es" role="option"><span>Español</span><span class="locale-code">ES</span></button><button class="locale-option" type="button" data-locale="en" role="option" aria-selected="true"><span>English</span><span class="locale-code">EN</span></button></div>
-              </div></div>
+              
             </div>
             <nav class="lp-footer-links" aria-label="Pie de página">
               <a href="#/" data-scroll="quienes">¿Quiénes somos?</a>
@@ -7526,7 +7529,7 @@ async function toggleBusqueda(id) {
         // translated again (e.g. "Sign up" must not be changed by the "Si" entry).
         const translationMap=new Map(entries);
         // Match original Spanish text once; never reprocess translated output.
-        const escapeRegex=source=>source.split("").map(char=>".^$*+?()[]{}|\\-".includes(char)?"\\"+char:char).join("");
+        const escapeRegex=source=>source.split("").map(char=>".^$*+?()[]{}|\\\".includes(char)?"\\"+char:char).join("");
         const patternSource=source=>{const escaped=escapeRegex(source);return /^[\p{L}\p{N}]+$/u.test(source)?`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`:escaped;};
         const translationPattern=new RegExp(entries.map(([source])=>patternSource(source)).join("|"),"gu");
         function translate(value){

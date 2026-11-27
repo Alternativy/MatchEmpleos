@@ -7,9 +7,12 @@ const sourceFiles = [
   ["en/index.html", new URL("../en/index.html", import.meta.url)],
 ];
 
-test("las páginas de la app no contienen el error tipográfico Yesgn", async () => {
+// Construye la cadena a partir de fragmentos para que la prueba tampoco la introduzca.
+const forbiddenText = new RegExp(["ye", "sgn"].join(""), "i");
+
+test("las páginas de la app no contienen la errata de Sign up", async () => {
   for (const [label, url] of sourceFiles) {
     const html = await readFile(url, "utf8");
-    assert.doesNotMatch(html, /yesgn/i, `${label}: no debe aparecer "Yesgn"`);
+    assert.doesNotMatch(html, forbiddenText, `${label}: contiene una errata de traducción`);
   }
 });

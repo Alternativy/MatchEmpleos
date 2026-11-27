@@ -35,3 +35,22 @@ test("el selector de idioma queda excluido del traductor automático", async () 
   const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
   assert.match(html, /node\.classList&&node\.classList\.contains\("locale-switcher"\)/);
 });
+
+test("el escape de expresiones regulares no invalida el traductor en modo Unicode", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  const backslash = String.fromCharCode(92);
+  const line = html.slice(html.indexOf("escapeRegex=source=>"), html.indexOf("\\n", html.indexOf("escapeRegex=source=>")));
+  assert.ok(line.includes("|" + backslash + backslash + '".includes(char)'));
+  const escapeRegex = source => source.split("").map(char =>
+    (".^$*+?()[]{}|" + backslash).includes(char) ? backslash + char : char
+  ).join("");
+  assert.doesNotThrow(() => new RegExp(escapeRegex("Sign-up"), "gu"));
+});
+
+test("el selector de idioma está junto a los enlaces de cuenta en la portada inglesa", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  const start = html.indexOf('<nav aria-label="Cuenta" class="lp-account">');
+  const end = html.indexOf("</nav>", start);
+  assert.ok(start >= 0 && end > start);
+  assert.ok(html.slice(start, end).includes('class="locale-switcher"'));
+});

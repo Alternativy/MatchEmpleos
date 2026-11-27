@@ -38,7 +38,7 @@ test("la página inglesa incluye traducciones y navegación de vuelta al españo
 });
 
 test("el panel inglés mantiene sus rutas hash dentro de /en/", () => {
-  assert.match(english, /link=event\.target\.closest\('a\[href\^="#\/"\]'\)/);
+  assert.match(english, /const\s+link\s*=\s*event\.target\.closest\('a\[href\^="#\/"\]'\)/);
   assert.match(english, /if\s*\(\s*!link\s*\|\|\s*link\.hasAttribute\("data-scroll"\)\s*\)\s*return;/);
   assert.match(english, /location\.assign\("\/en\/"\s*\+\s*link\.getAttribute\("href"\)\)/);
 });

@@ -3405,7 +3405,7 @@
         }
 
       /* Selector de idioma */
-      .locale-switcher{position:absolute;z-index:9999;top:0;bottom:0;right:calc(28 * var(--u));display:flex;align-items:center;transform:none;font-family:var(--font)}
+      .locale-switcher{position:relative;z-index:5;display:flex;align-items:center;flex:none;margin-left:calc(-39 * var(--u));font-family:var(--font)}
       .locale-trigger{display:flex;align-items:center;gap:9px;min-height:42px;padding:0 14px;border:1px solid rgba(255,255,255,.22);border-radius:24px;background:var(--navy2);color:var(--white);font:600 13px var(--font);box-shadow:0 8px 24px rgba(0,0,0,.18);backdrop-filter:blur(12px)}
       .locale-trigger:hover,.locale-trigger[aria-expanded="true"]{border-color:var(--green);color:var(--green)}
       .locale-globe{width:17px;height:17px;display:block}
@@ -3416,7 +3416,7 @@
       .locale-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 12px;border:0;border-radius:10px;background:transparent;color:var(--white);text-align:left;font:500 14px var(--font)}
       .locale-option:hover,.locale-option[aria-selected="true"]{background:rgba(54,244,140,.12);color:var(--green)}
       .locale-option .locale-code{font-size:11px;color:var(--t2);letter-spacing:.08em}
-      @media(max-width:999px){.locale-switcher{right:12px}.landing-v2 .lp-header nav{margin-right:96px}}@media(max-width:600px){.locale-trigger{min-height:38px;padding:0 9px;gap:6px}.locale-menu{width:170px}}
+      @media(max-width:999px){.locale-switcher{margin-left:-8px}.landing-v2 .lp-header nav{margin-right:0}}@media(max-width:600px){.locale-trigger{min-height:38px;padding:0 8px;gap:5px}.locale-menu{width:170px}}
       @media(prefers-reduced-motion:reduce){.locale-chevron{transition:none}}
 </style>
 </head>
@@ -3454,6 +3454,10 @@
             <nav aria-label="Cuenta" class="lp-account">
               <a href="#/login">Iniciar sesión</a>
               <a href="#/registro">Registrarse</a>
+              <div class="locale-switcher">
+                <button class="locale-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma"><svg class="locale-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></svg><span class="locale-current">ES</span><span class="locale-chevron" aria-hidden="true">▾</span></button>
+                <div class="locale-menu" role="listbox" aria-label="Idioma" hidden><button class="locale-option" type="button" data-locale="es" role="option"><span>Español</span><span class="locale-code">ES</span></button><button class="locale-option" type="button" data-locale="en" role="option"><span>English</span><span class="locale-code">EN</span></button><button class="locale-option" type="button" data-locale="pt" role="option"><span>Português</span><span class="locale-code">PT</span></button></div>
+              </div>
             </nav>
           </header>
 
@@ -7120,26 +7124,41 @@ async function toggleBusqueda(id) {
         }
         document.addEventListener("db-error", () => toast("No se pudo guardar. Revisá tu conexión."));
 
-        /* Selector de idioma: UI únicamente, sin traducciones de contenido */
+        /* Selector de idioma: eventos delegados para sobrevivir a los re-renderizados */
         (function initLocaleSwitcher(){
-          if(document.querySelector(".locale-switcher")) return;
-          const root=document.createElement("div");
-          root.className="locale-switcher";
-          root.innerHTML='<button class="locale-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma"><svg class="locale-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></svg><span class="locale-current">ES</span><span class="locale-chevron" aria-hidden="true">▾</span></button><div class="locale-menu" role="listbox" aria-label="Idioma" hidden><button class="locale-option" type="button" data-locale="es" role="option"><span>Español</span><span class="locale-code">ES</span></button><button class="locale-option" type="button" data-locale="en" role="option"><span>English</span><span class="locale-code">EN</span></button><button class="locale-option" type="button" data-locale="pt" role="option"><span>Português</span><span class="locale-code">PT</span></button></div>';
-          const headerContent=document.querySelector(".lp-header")||document.querySelector(".top .wrap");
-          if(headerContent){headerContent.appendChild(root);}else{document.body.appendChild(root);}
-          const trigger=root.querySelector(".locale-trigger"),menu=root.querySelector(".locale-menu"),current=root.querySelector(".locale-current");
           let selected="es";
-          trigger.addEventListener("click",()=>{menu.hidden=!menu.hidden;trigger.setAttribute("aria-expanded",String(!menu.hidden));});
-          root.querySelectorAll("[data-locale]").forEach(button=>button.addEventListener("click",()=>{
-            selected=button.dataset.locale;
-            current.textContent=selected.toUpperCase();
-            root.querySelectorAll(".locale-option").forEach(option=>option.setAttribute("aria-selected",String(option.dataset.locale===selected)));
-            menu.hidden=true;
-            trigger.setAttribute("aria-expanded","false");
-          }));
-          document.addEventListener("click",event=>{if(!root.contains(event.target)){menu.hidden=true;trigger.setAttribute("aria-expanded","false");}});
-          document.addEventListener("keydown",event=>{if(event.key==="Escape"){menu.hidden=true;trigger.setAttribute("aria-expanded","false");trigger.focus();}});
+          document.addEventListener("click",event=>{
+            const root=event.target.closest(".locale-switcher");
+            const trigger=event.target.closest(".locale-trigger");
+            const option=event.target.closest(".locale-option");
+            if(trigger&&root){
+              const menu=root.querySelector(".locale-menu");
+              menu.hidden=!menu.hidden;
+              trigger.setAttribute("aria-expanded",String(!menu.hidden));
+              return;
+            }
+            if(option&&root){
+              selected=option.dataset.locale;
+              root.querySelector(".locale-current").textContent=selected.toUpperCase();
+              root.querySelectorAll(".locale-option").forEach(item=>item.setAttribute("aria-selected",String(item.dataset.locale===selected)));
+              const menu=root.querySelector(".locale-menu");
+              menu.hidden=true;
+              root.querySelector(".locale-trigger").setAttribute("aria-expanded","false");
+              return;
+            }
+            document.querySelectorAll(".locale-switcher").forEach(item=>{
+              const menu=item.querySelector(".locale-menu"),button=item.querySelector(".locale-trigger");
+              if(menu){menu.hidden=true;button.setAttribute("aria-expanded","false");}
+            });
+          });
+          document.addEventListener("keydown",event=>{
+            if(event.key==="Escape"){
+              document.querySelectorAll(".locale-switcher").forEach(root=>{
+                const menu=root.querySelector(".locale-menu"),trigger=root.querySelector(".locale-trigger");
+                if(menu){menu.hidden=true;trigger.setAttribute("aria-expanded","false");}
+              });
+            }
+          });
         })();
 
         let ultimoUid = undefined;

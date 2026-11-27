@@ -6,10 +6,18 @@ const spanish = await readFile(new URL("../index.html", import.meta.url), "utf8"
 const english = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
 const spec = await readFile(new URL("../docs/requisitos-localizacion.md", import.meta.url), "utf8");
 
-test("la versión española conserva su idioma y el selector navega a las rutas", () => {
+function assertLocaleNavigation(html, label) {
+  assert.match(html, /data-locale="es" role="option"/, `${label}: opción español`);
+  assert.match(html, /data-locale="en" role="option"/, `${label}: opción inglés`);
+  assert.match(html, /if\(selected==="en"\|\|selected==="es"\)/, `${label}: solo admite los idiomas disponibles`);
+  assert.match(html, /const localePath=selected==="en"\?"\/en\/"\:"\/"\;/, `${label}: asigna la ruta según el idioma`);
+  assert.match(html, /location\.assign\(localePath\+location\.search\+location\.hash\)/, `${label}: conserva query y hash`);
+  assert.doesNotMatch(html, /data-locale="pt"/, `${label}: portugués ya no aparece como opción`);
+}
+
+test("la versión española conserva idioma y navegación del selector", () => {
   assert.match(spanish, /<html lang="es-AR">/);
-  assert.match(spanish, /location\.assign\("\/en\/"\)/);
-  assert.match(spanish, /location\.assign\("\/"\)/);
+  assertLocaleNavigation(spanish, "versión española");
 });
 
 test("la versión inglesa se sirve en /en/ con recursos desde la raíz", () => {
@@ -25,13 +33,17 @@ test("la página inglesa incluye noindex desde el HTML inicial", () => {
 test("la página inglesa incluye traducciones y navegación de vuelta al español", () => {
   assert.match(english, /Welcome to Match Jobs/);
   assert.match(english, /Your next opportunity starts with a MATCH/);
-  assert.match(english, /if\(selected==="es"\)\{location\.assign\("\/"\)/);
+  assertLocaleNavigation(english, "versión inglesa");
   assert.match(english, /document\.documentElement\.lang="en"/);
 });
 
-test("portugués permanece deshabilitado y el renaming del logo queda documentado", () => {
-  assert.match(spanish, /data-locale="pt" role="option" disabled aria-disabled="true"/);
-  assert.match(english, /data-locale="pt" role="option" disabled aria-disabled="true"/);
+test("el panel inglés mantiene sus rutas hash dentro de /en/", () => {
+  assert.match(english, /link=event\.target\.closest\('a\[href\^="#\/"\]'\)/);
+  assert.match(english, /if\(!link\|\|link\.hasAttribute\("data-scroll"\)\)return;/);
+  assert.match(english, /location\.assign\("\/en\/"\+link\.getAttribute\("href"\)\)/);
+});
+
+test("el renaming del logo queda documentado", () => {
   assert.match(spec, /Renaming del logo: reemplazar la denominación visual actual por \*\*MatchJobs\*\*/);
   assert.match(spec, /El logo gráfico no se modifica en esta implementación/);
 });

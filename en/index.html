@@ -205,6 +205,15 @@
       .lockup .words img:last-child {
         width: 76px;
       }
+      .lockup .words .jobs-word {
+        display: block;
+        width: 76px;
+        color: var(--navy);
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 1.1px;
+      }
       .search {
         flex: 1;
         display: flex;
@@ -3923,7 +3932,7 @@
 
         /* ---------- Iconos y piezas de marca ---------- */
         const ISO = '<img loading="lazy" decoding="async" class="iso" src="img/isotipo.svg" alt="">';
-        const LOCKUP = `<a class="lockup" href="#/" aria-label="Match Empleos, inicio">${ISO}<span class="words"><img loading="lazy" decoding="async" src="img/logo-match.png" alt=""><img loading="lazy" decoding="async" src="img/logo-empleos.png" alt=""></span></a>`;
+        const LOCKUP = `<a class="lockup" href="#/" aria-label="Match Empleos, inicio">${ISO}<span class="words"><img loading="lazy" decoding="async" src="img/logo-match.png" alt=""><span class="jobs-word" aria-label="Jobs">JOBS</span></span></a>`;
         const WM =
           '<a class="wm-link" href="#/" aria-label="Match Empleos, inicio"><img class="wm" src="img/logo-match-empleos.png" alt="Match Empleos"></a>';
         const WM_INV =

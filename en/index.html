@@ -3518,7 +3518,7 @@
             </a>
             <nav aria-label="Cuenta" class="lp-account">
               <a href="#/login">Iniciar sesión</a>
-              <a href="#/registro">Registrarse</a>
+              <a href="#/registro">Sign up</a>
 
             </nav>
           </header>
@@ -4348,7 +4348,7 @@
           return ME.id ? (ME.rol === "e" ? "#/e/panel" : "#/c/feed") : "#/login";
         }
         function navCuenta() {
-          if (!ME.id) return '<nav aria-label="Cuenta"><a href="#/login">Iniciar sesión</a><a href="#/registro">Registrarse</a></nav>';
+          if (!ME.id) return '<nav aria-label="Cuenta"><a href="#/login">Iniciar sesión</a><a href="#/registro">Sign up</a></nav>';
           const emp = ME.rol === "e";
           const to = emp ? "#/e/panel" : "#/c/feed";
           const localeBase = location.pathname.startsWith("/en/") ? "/en/" : "/";

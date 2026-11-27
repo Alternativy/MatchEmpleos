@@ -3405,7 +3405,7 @@
         }
 
       /* Selector de idioma */
-      .locale-switcher{position:absolute;z-index:9999;top:50%;right:calc(28 * var(--u));transform:translateY(-50%);font-family:var(--font)}
+      .locale-switcher{position:absolute;z-index:9999;top:0;bottom:0;right:calc(28 * var(--u));display:flex;align-items:center;transform:none;font-family:var(--font)}
       .locale-trigger{display:flex;align-items:center;gap:9px;min-height:42px;padding:0 14px;border:1px solid rgba(255,255,255,.22);border-radius:24px;background:var(--navy2);color:var(--white);font:600 13px var(--font);box-shadow:0 8px 24px rgba(0,0,0,.18);backdrop-filter:blur(12px)}
       .locale-trigger:hover,.locale-trigger[aria-expanded="true"]{border-color:var(--green);color:var(--green)}
       .locale-globe{width:17px;height:17px;display:block}

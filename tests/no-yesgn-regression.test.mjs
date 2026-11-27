@@ -1,0 +1,67 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const sourceFiles = [
+  ["index.html", new URL("../index.html", import.meta.url)],
+  ["en/index.html", new URL("../en/index.html", import.meta.url)],
+];
+
+// Construye la cadena a partir de fragmentos para que la prueba tampoco la introduzca.
+const forbiddenText = new RegExp(["ye", "sgn"].join(""), "i");
+
+test("las páginas de la app no contienen la errata de Sign up", async () => {
+  for (const [label, url] of sourceFiles) {
+    const html = await readFile(url, "utf8");
+    assert.doesNotMatch(html, forbiddenText, `${label}: contiene una errata de traducción`);
+  }
+});
+test("las traducciones se aplican en una sola pasada", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  assert.match(html, /value\.replace\(translationPattern,source=>translationMap\.get\(source\)\)/);
+  assert.doesNotMatch(html, /for\(const \[source,target\] of entries\).*result\.split\(source\)\.join\(target\)/);
+});
+
+test("una traducción de palabra no modifica coincidencias dentro de palabras inglesas", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  assert.match(html, /patternSource=source=>/);
+  assert.ok(html.includes(String.raw`(?<![\\p{L}\\p{N}_])`));
+  const wholeWordSi = new RegExp("(?<![\\p{L}\\p{N}_])Si(?![\\p{L}\\p{N}_])", "gu");
+  assert.equal("Sign up".replace(wholeWordSi, "Yes"), "Sign up");
+  assert.equal("Si tenés".replace(wholeWordSi, "Yes"), "Yes tenés");
+});
+
+test("el selector de idioma queda excluido del traductor automático", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  assert.match(html, /node\.classList&&node\.classList\.contains\("locale-switcher"\)/);
+});
+
+test("el escape de expresiones regulares no invalida el traductor en modo Unicode", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  const backslash = String.fromCharCode(92);
+  const line = html.slice(html.indexOf("escapeRegex=source=>"), html.indexOf("\n", html.indexOf("escapeRegex=source=>")));
+  assert.ok(line.includes("|" + backslash + backslash + '".includes(char)'));
+  const escapeRegex = source => source.split("").map(char =>
+    (".^$*+?()[]{}|" + backslash).includes(char) ? backslash + char : char
+  ).join("");
+  assert.doesNotThrow(() => new RegExp(escapeRegex("Sign-up"), "gu"));
+});
+
+test("el selector de idioma está junto a los enlaces de cuenta en la portada inglesa", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  const start = html.indexOf('<nav aria-label="Cuenta" class="lp-account">');
+  const end = html.indexOf("</nav>", start);
+  assert.ok(start >= 0 && end > start);
+  assert.ok(html.slice(start, end).includes('class="locale-switcher"'));
+});
+
+test("navCuenta conserva el selector cuando la landing reemplaza el header", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  const start = html.indexOf("function navCuenta()");
+  const end = html.indexOf("function home()", start);
+  assert.ok(start >= 0 && end > start);
+  const navCuenta = html.slice(start, end);
+  assert.match(navCuenta, /const languageSelector =/);
+  assert.match(navCuenta, /languageSelector/);
+  assert.match(navCuenta, /class="lp-account"/);
+});

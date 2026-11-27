@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Esta especificación define los requisitos para incorporar versiones localizadas de Match Empleos. En esta etapa se documentan los criterios; no implica que las traducciones ni el enrutamiento localizado ya estén implementados.
+Esta especificación define los requisitos de localización de Match Empleos. La versión inglesa se implementa en `/en/`; la versión española conserva su URL y comportamiento. La versión portuguesa y la revisión editorial de las traducciones quedan pendientes.
 
 ## URLs por idioma
 
@@ -37,3 +37,8 @@ Las traducciones iniciales podrán generarse con IA. La revisión y corrección 
 4. Todas las páginas localizadas no españolas emiten una directiva de no indexación.
 5. La versión española no recibe esa directiva como consecuencia de la localización.
 6. La corrección editorial de las traducciones no bloquea esta primera etapa.
+
+## Pendiente de marca
+
+- Renaming del logo: reemplazar la denominación visual actual por **MatchJobs** en una etapa posterior. El logo gráfico no se modifica en esta implementación.
+- La versión portuguesa (`/pt/`) sigue pendiente. Su opción permanece deshabilitada en el selector hasta que esté disponible.

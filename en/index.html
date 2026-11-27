@@ -7522,10 +7522,16 @@ async function toggleBusqueda(id) {
         entries.push(...Object.entries(panelUiTranslations));
         entries.push(...Object.entries(extraTranslations));
         entries.sort((a,b)=>b[0].length-a[0].length);
-        function translate(value){
+        // Replace source-language matches in one pass so translated text is never
+        // translated again (e.g. "Sign up" must not be changed by the "Si" entry).
+        const translationMap=new Map(entries);
+        const translationPattern=new RegExp(entries.map(([source])=>source.replace(/[.*+?^${}()|[\]\\]/g,"\\        function translate(value){
           let result=value;
           for(const [source,target] of entries){if(result.includes(source))result=result.split(source).join(target);}
           return result;
+        }")).join("|"),"g");
+        function translate(value){
+          return value.replace(translationPattern,source=>translationMap.get(source));
         }
         function visit(node){
           if(node.nodeType===Node.TEXT_NODE){const next=translate(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;return;}

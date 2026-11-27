@@ -20,12 +20,16 @@ test("el selector público permanece en el footer, alineado con las redes", () =
   assert.match(html, /\.landing-v2 \.lp-footer-locale \.locale-switcher\s*\{[^}]*top:\s*calc\(109\s*\*\s*var\(--u\)\)[^}]*right:/, "En escritorio debe conservar su alineación en la landing");
 });
 
-test("los paneles de postulantes y empresas incluyen el selector flotante", () => {
+test("los paneles de postulantes y empresas incluyen el selector flotante", async () => {
   assert.match(html, /function appLocaleSwitcher\(\)/, "Debe existir un generador reutilizable del selector para la app");
   assert.match(html, /class="app-locale"[\s\S]*?class="locale-switcher"/, "El selector de la app debe tener su contenedor flotante");
   assert.match(html, /return `<div class="app has-nav [\s\S]*?\$\{dock\}\$\{appLocaleSwitcher\(\)\}<\/div>`/, "shell() debe incluir el selector tanto para el panel de postulantes como para el de empresas");
   assert.match(html, /\.app-locale\s*\{[^}]*position:\s*fixed[^}]*right:/, "El selector de los paneles debe permanecer fijo en la esquina inferior derecha");
   assert.match(html, /\.app-locale \.locale-menu\s*\{[^}]*bottom:\s*calc\(100% \+ 8px\)/, "El menú debe abrirse hacia arriba para no quedar fuera de pantalla");
+  const english = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  assert.match(english, /function appLocaleSwitcher\(\)/, "El panel inglés también debe incluir un selector");
+  assert.match(english, /\$\{dock\}\$\{appLocaleSwitcher\(\)\}/, "El shell inglés debe renderizar el selector");
+  assert.match(english, /const localeBase = location\.pathname\.startsWith\("\/en\/"\) \? "\/en\/" : "\/"/, "La foto de perfil debe conservar el prefijo inglés al abrir el panel");
 });
 
 test("los eventos del selector sobreviven a los re-renderizados", async () => {

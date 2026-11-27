@@ -3966,27 +3966,27 @@
           return d.getHours().toString().padStart(2, "0") + ":" + d.getMinutes().toString().padStart(2, "0");
         };
         const DIA_MS = 86400000;
-        // "hoy", "ayer", "hace 3 días" o la fecha
+        // Relative dates in the English application.
         function fechaRel(iso) {
           if (!iso) return "";
           const d = new Date(iso);
           if (Number.isNaN(d.getTime())) return "";
           const hoy = new Date();
           const dias = Math.round((new Date(hoy.toDateString()) - new Date(d.toDateString())) / DIA_MS);
-          if (dias <= 0) return "hoy";
-          if (dias === 1) return "ayer";
-          if (dias < 7) return `hace ${dias} días`;
-          return d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+          if (dias <= 0) return "today";
+          if (dias === 1) return "yesterday";
+          if (dias < 7) return `${dias} days ago`;
+          return d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
         }
         function diaChat(iso) {
           const r = fechaRel(iso || new Date().toISOString());
-          return r === "hoy" ? "Hoy" : r === "ayer" ? "Ayer" : r.charAt(0).toUpperCase() + r.slice(1);
+          return r === "today" ? "Today" : r === "yesterday" ? "Yesterday" : r.charAt(0).toUpperCase() + r.slice(1);
         }
         function diasTxt(d) {
           if (d == null) return "";
-          if (d < 1) return "menos de 1 día";
+          if (d < 1) return "less than 1 day";
           const n = Math.round(d);
-          return n + (n === 1 ? " día" : " días");
+          return n + (n === 1 ? " day" : " days");
         }
         // Días que le quedan a la empresa para responder (negativo si ya venció)
         function diasRestantes(creada, plazo) {
@@ -3996,7 +3996,7 @@
           return diferencia <= 0 ? -1 : Math.ceil(diferencia / DIA_MS);
         }
         function venceTxt(q) {
-          return q < 0 ? "Plazo vencido" : q === 0 ? "Vence hoy" : `Vence en ${q} día${q === 1 ? "" : "s"}`;
+          return q < 0 ? "Deadline passed" : q === 0 ? "Due today" : `Due in ${q} day${q === 1 ? "" : "s"}`;
         }
         // Conjuntos guardados por usuario en el navegador (descartadas, notificaciones leídas, matches vistos)
         function leerSet(nombre) {
@@ -5429,7 +5429,7 @@ async function toggleBusqueda(id) {
           return shell("e", "#/e/candidatos", inner);
         }
         function eEmpresa() {
-          const mesActual = new Intl.DateTimeFormat("es-AR", { month: "long" })
+          const mesActual = new Intl.DateTimeFormat("en-US", { month: "long" })
             .format(new Date())
             .replace(/^./, (c) => c.toUpperCase());
           const inner = `<div style="max-width:720px"><h1 class="t-title" style="margin-bottom:16px;font-size:20px">Mi empresa</h1>
@@ -7254,6 +7254,188 @@ async function toggleBusqueda(id) {
         const translations={"La propuesta busca transformar la manera tradicional de buscar empleo, haciendo que el proceso sea más simple, dinámico y personalizado. En lugar de enfrentarse a una gran cantidad de ofertas, los usuarios reciben oportunidades relevantes para su perfil y pueden mostrar interés en aquellas que realmente les resulten atractivas.":"Our goal is to transform the traditional job search by making it simpler, more dynamic, and more personalized. Instead of facing an overwhelming number of listings, users receive opportunities that match their profile and can express interest in the ones that appeal to them.","Somos un equipo de cinco estudiantes que desarrollamos una plataforma digital pensada para facilitar el acceso de los jóvenes al mundo laboral y generar nuevas formas de conexión con empresas y reclutadores.":"We are a team of five students developing a digital platform designed to help young people access the job market and connect with companies and recruiters in new ways.","De esta búsqueda nace Match Empleos, una plataforma digital que conecta a postulantes con empresas y reclutadores que buscan talentos.":"This idea led to Match Jobs, a digital platform that connects job seekers with companies and recruiters looking for talent.","La plataforma continúa en desarrollo. Algunas funciones pueden presentar errores o comportamientos inesperados.":"The platform is still under development. Some features may contain errors or behave unexpectedly.","Después de enviar la solicitud, te indicaremos si fue aceptada. Revisá también spam o correo no deseado.":"After submitting your request, we'll let you know if it was accepted. Also check your spam folder.","Ingresá el email asociado a tu cuenta y te enviaremos instrucciones para crear una nueva contraseña.":"Enter the email address associated with your account and we'll send you instructions to create a new password.","La empresa está obligada a responderte, vos tenés derecho a saber.":"The company is required to respond. You have the right to know.","Revisá el correo y usá una contraseña de al menos 8 caracteres.":"Check your email and use a password of at least 8 characters.","Tu próxima oportunidad puede estar más cerca de lo que pensás.":"Your next opportunity may be closer than you think.","En Match Empleos creemos que todas las oportunidades cuentan.":"At Match Jobs, we believe every opportunity matters.","Propuesta presentada para Premios OBRAR Estudiantes 2026.":"Project submitted to the OBRAR Student Awards 2026.","2026 - Match Empleos - Todos los derechos reservados.":"2026 - Match Empleos - All rights reserved.","Estamos trabajando para mejorar la experiencia.":"We're working to improve your experience.","Te enviamos un enlace para confirmar tu cuenta":"We sent you a link to confirm your account","Tu próxima oportunidad empieza con un MATCH":"Your next opportunity starts with a MATCH","Podés ver los candidatos que se postularon.":"View the candidates who applied.","Posibilidad de dialogar con el postulante.":"You can communicate directly with applicants.","Creá tu perfil de postulante verificado.":"Create your verified job seeker profile.","Escogé categorías de trabajo preferidas.":"Choose your preferred job categories.","Posibilidad de dialogar con la empresa.":"You can communicate directly with the company.","Si te aceptan, felicidades, hay MATCH.":"If you're accepted, congratulations—you have a MATCH.","Creá tu perfil de empresa verificado.":"Create your verified company profile.","Si encontrás el candidato, hay MATCH.":"When you find the right candidate, it's a MATCH.","Se muestra tu promedio de respuesta.":"Your response rate is displayed.","Podés elegir o no una postulación.":"Choose whether or not to apply.","¡El futuro no espera, vos tampoco!":"The future won't wait—and neither should you!","Tenés 5 postulaciones por semana.":"You can submit 5 applications per week.","Ofrecé postulaciones de trabajo, ":"Post job opportunities ","Match Empleos: Acá te contestan":"Match Jobs: Here, you get a response","¿Has olvidado tu contraseña?":"Forgot your password?","Busco gente para mi empresa":"I'm hiring for my company","Ya confirmé, iniciar sesión":"I've confirmed my email; log in","Bienvenido a Match Empleos":"Welcome to Match Jobs","¡Deslizá para conocer más!":"Scroll to learn more!","De la generación Z sufrió ":"of Gen Z experienced ","¿Aún no te has registrado?":"Not registered yet?","Desocupación en personas ":"Unemployment among people ","ghosting al postularse. ":"ghosting after applying. ","según categoría y cargo.":"by category and position.","900.000 beneficiarios.":"900,000 beneficiaries.","Términos y Condiciones":"Terms and Conditions","Recuperá tu contraseña":"Reset your password","entre 14 y 29 años, ":"aged 14–29, ","con un 7,5% general.":"with an overall rate of 7.5%.","Es la tasa de 1.500 ":"The rate of 1,500 ","Centro de Privacidad":"Privacy Center","Situación actual en":"The current situation in","El 45% dudó de sus ":"45% questioned their ","Mínimo 8 caracteres":"At least 8 characters","Rechazar postulante":"Reject applicant","inserciones sobre ":"placements out of ","ejemplo@correo.com":"name@example.com","Guardar contraseña":"Save password","Correo electrónico":"Email address","Escribí un mensaje":"Write a message","Editar publicación":"Edit job post","Aceptar postulante":"Accept applicant","Perfil Postulante":"Job Seeker Profile","Registrar usuario":"Register as a job seeker","Registrar empresa":"Register your company","¿Ya tenés cuenta?":"Already have an account?","Sin postulaciones":"No applications","Crear publicación":"Create job post","Mis publicaciones":"My job posts","Usar esta versión":"Use this version","Mantener original":"Keep original","Revisá tu correo":"Check your email","Nueva contraseña":"New password","Situación actual":"Current situation","Volver al inicio":"Back to home","¿Quiénes somos?":"Who we are","¿Cómo funciona?":"How it works","Reenviar correo":"Resend email","Guardar cambios":"Save changes","Perfil completo":"Complete profile","Perfil Empresa":"Company Profile","Cambiar idioma":"Change language","Iniciar sesión":"Log in","Notificaciones":"Notifications","Sin resultados":"No results","Enviar mensaje":"Send message","Mejorar con IA":"Improve with AI","Match Empleos":"Match Jobs","MATCH EMPLEOS":"MATCH JOBS","Cerrar sesión":"Log out","Iniciá sesión":"Log in","Busco trabajo":"I'm looking for a job","Postulaciones":"Applications","Cómo funciona":"How it works","capacidades.":"abilities.","Seguinos en:":"Follow us:","Sin mensajes":"No messages","Descargar CV":"Download CV","Crear cuenta":"Create account","Bienvenido/a":"Welcome","Próximamente":"Coming soon","Registrarse":"Sign up","Seleccionar":"Select","Cargando...":"Loading...","Experiencia":"Experience","Descripción":"Description","Completar:":"Complete:","Contraseña":"Password","Registraté":"Sign up","Candidatos":"Candidates","Postularme":"Apply","Ver perfil":"View profile","Requisitos":"Requirements","Generar CV":"Generate CV","Crea tu CV":"Create your CV","Privacidad":"Privacy","Tu empresa":"Your company","Argentina":"Argentina","Contacto:":"Contact:","Búsquedas":"Job searches","Descargar":"Download","Continuar":"Continue","Confirmar":"Confirm","Cargando…":"Loading…","Postulado":"Applied","Sobre vos":"About you","Educación":"Education","Ubicación":"Location","Acerca de":"About","Denunciar":"Report","Tu perfil":"Your profile","Mi perfil":"My profile","Português":"Portuguese","Mensajes":"Messages","Cancelar":"Cancel","Eliminar":"Delete","Apellido":"Last name","Teléfono":"Phone","Publicar":"Publish","Inactiva":"Inactive","Rechazar":"Reject","Términos":"Terms","Español":"Spanish","Empresa":"Company","Filtrar":"Filter","Guardar":"Save","Aceptar":"Accept","Aplicar":"Apply","Horario":"Schedule","Salario":"Salary","Gracias":"Thank you","Idioma":"Language","Volver":"Back","Correo":"Email","Enviar":"Send","Perfil":"Profile","Futuro":"The future","Buscar":"Search","Editar":"Edit","Puesto":"Position","Nombre":"Name","Motivo":"Reason","Estado":"Status","Activa":"Active","Ver CV":"View CV","Inicio":"Home","Ayuda":"Help","Match":"Match","Error":"Error","Éxito":"Success","Rubro":"Industry","Ver":"View","Sí":"Yes","No":"No"};
         const entries=Object.entries(translations).sort((a,b)=>b[0].length-a[0].length);
         const extraTranslations={"Esta búsqueda ya no está disponible.":"This job search is no longer available.","Ya te postulaste a esta búsqueda.":"You've already applied to this job.","No pudimos enviar la postulación. Probá de nuevo.":"We couldn't submit your application. Please try again.","Iniciá sesión para guardar los cambios.":"Log in to save your changes.","No pudimos cambiar el estado de la búsqueda.":"We couldn't update the job search status.","No pudimos eliminar la búsqueda. Probá de nuevo.":"We couldn't delete the job search. Please try again.","Primero respondé las postulaciones pendientes.":"Please respond to pending applications first.","No pudimos guardar la búsqueda. Probá de nuevo.":"We couldn't save the job search. Please try again.","No pudimos enviar la respuesta. Probá de nuevo.":"We couldn't send the response. Please try again.","Empresa nueva: todavía no tiene historial de respuestas":"New company: no response history yet","Seleccioná un motivo para la denuncia.":"Select a reason for your report.","No se pudo enviar: la empresa o postulación no coincide con tus datos.":"Couldn't submit: the company or application doesn't match your information.","No pudimos enviar la denuncia. Probá de nuevo.":"We couldn't submit the report. Please try again.","Denuncia enviada. El equipo revisará el caso.":"Report submitted. Our team will review it.","Contraseña":"Password","Escribí aquí":"Type here","Atención al público":"Customer service","Gastronomía":"Food service","Administración":"Administration","Logística":"Logistics","Diseño":"Design","1–2 años":"1–2 years","3 años o más":"3 years or more","Pasantía":"Internship","Híbrido":"Hybrid","Mañana":"Morning","Creá tu cuenta":"Create your account","Completá tu nombre y apellido para continuar.":"Enter your first and last name to continue.","Ubicación/Residencia":"Location/Residence","¡No necesitás experiencia para empezar a encontrar tu Match!":"You don't need experience to find your Match!","Puesto/Posición":"Job title/Position","Duración en el cargo":"Time in role","¿Qué buscás?":"What are you looking for?","Elegí un puesto/posición":"Choose a job title/position","¿Cómo te gustaría trabajar?":"How would you like to work?","Completá tu perfil":"Complete your profile","Terminá de relatarnos tus capacidades.":"Tell us more about your skills.","Adjuntá tu curriculum":"Attach your resume","Subí el archivo en formato PDF":"Upload your file in PDF format","Contanos más sobre vos":"Tell us more about yourself","Completá el nombre del responsable y el de la empresa para continuar.":"Enter the contact person's name and the company name to continue.","Ubicación":"Location","Tamaño de la empresa":"Company size","¿Qué perfil necesitas?":"What kind of candidate do you need?","Especificá las características del empleo":"Describe the job requirements","Todavía no tiene historial de respuestas en Match Empleos.":"There is no response history for this company yet.","Todavía no hay búsquedas disponibles":"No job searches available yet","Por ahora no quedan más oportunidades para revisar. Podés volver a verlas cuando quieras.":"There are no more opportunities to review right now. You can check back later.","Cuando una empresa publique una búsqueda compatible, va a aparecer acá.":"When a company posts a job that matches your profile, it will appear here.","Volver a ver las búsquedas":"Browse job searches again","No tenés postulaciones en este filtro.":"You have no applications in this filter.","Elegí una conversación.":"Choose a conversation.","Esta conversación nació de un match. Los dos dijeron que sí.":"This conversation started with a match. You both said yes.","Cuando una empresa te responda o haya match, lo vas a ver acá.":"When a company responds or you get a match, you'll see it here.","Marcar leídas":"Mark as read","Primero subí una foto desde tu perfil para poder incluirla.":"Upload a photo from your profile first to include it.","Perfil profesional / Sobre mí":"Professional profile / About me","Experiencias (una por línea; puesto · empresa · ubicación · fechas · tareas)":"Experience (one per line: role · company · location · dates · duties)","Estudios (una formación por línea)":"Education (one qualification per line)","Habilidades (una por línea)":"Skills (one per line)","Idiomas y nivel (uno por línea)":"Languages and proficiency (one per line)","Información adicional":"Additional information","Formación académica":"Education","Completá al menos nombre y correo antes de generar el CV.":"Enter at least your name and email before generating your resume.","La IA está organizando y redactando la información. Esto puede tardar unos segundos.":"AI is organizing and writing your information. This may take a few seconds.","La Edge Function devolvió una respuesta incompleta o con un formato inesperado.":"The Edge Function returned an incomplete or unexpected response.","CV generado correctamente. Podés editar, guardar o descargar el documento.":"Resume generated successfully. You can edit, save, or download it.","No pudimos generar el CV. Revisá tu conexión e intentá nuevamente.":"We couldn't generate your resume. Check your connection and try again.","No hay contenido para descargar. Generá o completá tu CV primero.":"There's no content to download. Generate or complete your resume first.","No se pudieron cargar las herramientas para generar el PDF. Recargá la página e intentá nuevamente.":"Couldn't load the PDF tools. Reload the page and try again.","Currículum vitae":"Resume","No pudimos generar el PDF. Intentá nuevamente.":"We couldn't generate the PDF. Please try again.","Configuración":"Settings","¿Querés cerrar sesión?":"Would you like to log out?","Si cerrás sesión, podrás volver a ingresar cuando quieras con tus datos de acceso.":"If you log out, you can sign back in anytime with your credentials.","Tu perfil, tus Matches y tus preferencias permanecerán guardados.":"Your profile, matches, and preferences will remain saved.","El perfil de tu empresa, tu logo y tus datos.":"Your company profile, logo, and information.","Tus búsquedas, las postulaciones que recibiste y tus respuestas.":"Your job searches, received applications, and responses.","Tus chats con postulantes.":"Your chats with applicants.","¿Seguro? Tu cuenta y todos tus datos se van a borrar para siempre.":"Are you sure? Your account and all your data will be permanently deleted.","No pudimos eliminar tus archivos. Tu cuenta sigue activa; probá de nuevo.":"We couldn't delete your files. Your account is still active; please try again.","Estás al día":"You're all caught up","Respondiste todas las postulaciones. Ya podés publicar una búsqueda nueva.":"You've responded to all applications. You can now post a new job.","Puesto (por ejemplo: Mozo/a de salón)":"Job title (e.g. Restaurant server)","Contá las tareas y qué buscás en la persona":"Describe the duties and what you're looking for in a candidate","Plazo estándar.":"Standard duration.","Máximo permitido.":"Maximum allowed.","Publicar búsqueda":"Post a job","Búsqueda de empleo":"Job search","¿De qué se trata?":"What's the job about?","Reactivar búsqueda":"Reactivate job","Pausar búsqueda":"Pause job","Escribí el nombre del puesto.":"Enter the job title.","Búsqueda actualizada.":"Job search updated.","Búsqueda pausada.":"Job search paused.","Búsqueda reactivada.":"Job search reactivated.","Respondiste a todos":"You've responded to everyone","Tu tasa de respuesta sube y ya podés publicar una búsqueda nueva.":"Your response rate is improving, and you can now post a new job.","Publicar una búsqueda":"Post a job","Le pediste más información":"You requested more information","Le pediste más información. Cuando decidas, contestale:":"You requested more information. When you're ready, reply:","Le avisamos con respeto y queda disponible para otra búsqueda.":"We'll let them know respectfully, and their profile will remain available for other opportunities.","Completá lo que está entre corchetes antes de enviar.":"Fill in the bracketed details before sending.","Respuesta enviada. Hay match y se abrió el chat.":"Response sent. It's a match, and the chat is open.","Le mandaste tus preguntas. Se abrió el chat.":"You sent your questions. The chat is now open.","Respuesta enviada. Le llega en su postulación.":"Response sent. They'll receive it with their application.","Completá los campos para continuar.":"Complete the fields to continue.","¡Listo! Tu empresa ya está en Match Empleos.":"Done! Your company is now on Match Jobs.","¡Listo! Tu perfil ya está creado.":"Done! Your profile has been created.","Podés elegir hasta tres rubros.":"You can choose up to three industries.","El texto original cambió. Generá una nueva sugerencia antes de aplicarla.":"The original text has changed. Generate a new suggestion before applying it.","Versión aplicada. Guardá los cambios del perfil para conservarla.":"Version applied. Save your profile changes to keep it.","Versión aplicada.":"Version applied.","Escribí el nombre del puesto para continuar.":"Enter the job title to continue.","Escribí un mensaje antes de enviar.":"Write a message before sending.","Escribí primero una descripción para poder mejorarla.":"Enter a description first so it can be improved.","El texto supera el límite de 4.000 caracteres. Acortalo para continuar.":"The text exceeds the 4,000-character limit. Shorten it to continue.","La generación está tardando un poco más. Seguimos intentando…":"Generation is taking a little longer. We're still trying…","Estamos probando una alternativa disponible. No cierres esta pantalla todavía…":"We're trying an available alternative. Please don't close this screen yet…","Respuesta vacía del servicio de IA.":"The AI service returned an empty response.","Propuesta lista. Revisala y editá lo que necesites; el texto original sigue intacto.":"Suggestion ready. Review and edit it as needed; your original text is unchanged.","La propuesta se generó sobre una versión anterior del texto. Volvé a generarla para poder aplicarla.":"The suggestion was generated from an older version of the text. Generate it again before applying.","No pudimos generar la propuesta. Tu texto original sigue intacto; podés volver a intentarlo.":"We couldn't generate the suggestion. Your original text is unchanged; you can try again.","Nueva búsqueda":"New job search","Iniciá sesión para ver las búsquedas que coinciden con tu perfil.":"Log in to see job searches that match your profile.","La empresa respondió que por ahora no avanza.":"The company has decided not to move forward for now.","La empresa respondió tu postulación.":"The company responded to your application.","Se postuló a esta búsqueda según su perfil.":"Applied to this job based on their profile.","tu postulación":"your application","Tu búsqueda":"Your job search","La edad se escribe solo con números.":"Age must be entered using numbers only.","Escribí un correo con formato válido, por ejemplo nombre@correo.com.":"Enter a valid email address, for example name@example.com.","Ingresá tu contraseña.":"Enter your password.","No pudimos cargar tu cuenta. Probá de nuevo.":"We couldn't load your account. Please try again.","Todavía no confirmaste tu correo.":"You haven't confirmed your email yet.","Reenviar correo de confirmación":"Resend confirmation email","Correo o contraseña incorrectos.":"Incorrect email or password.","¿Olvidaste tu contraseña?":"Forgot your password?","No pudimos iniciar sesión por un problema de conexión. Intentá nuevamente.":"We couldn't log in due to a connection problem. Please try again.","El CV no puede pesar más de 5 MB.":"The resume must be 5 MB or smaller.","La foto no puede pesar más de 2 MB.":"The photo must be 2 MB or smaller.","Escribí tu correo primero.":"Enter your email first.","No pudimos reenviar el correo. Probá de nuevo en unos minutos.":"We couldn't resend the email. Try again in a few minutes.","Te reenviamos el correo de confirmación.":"We resent the confirmation email.","No pudimos crear la cuenta. Probá de nuevo.":"We couldn't create your account. Please try again.","Después de confirmar tu correo, subí tu CV desde tu perfil.":"After confirming your email, upload your resume from your profile.","Escribí un correo con formato válido.":"Enter a valid email address.","No pudimos procesar la solicitud. Revisá tu conexión e intentá nuevamente en unos minutos.":"We couldn't process your request. Check your connection and try again in a few minutes.","La solicitud fue aceptada. Si existe una cuenta con ese correo, debería llegarle un enlace. Revisá spam o correo no deseado.":"The request was accepted. If an account exists for that email, a link should arrive. Check your spam or junk folder.","No pudimos procesar la solicitud por un problema de conexión. Intentá nuevamente.":"We couldn't process the request due to a connection issue. Please try again.","La contraseña debe tener al menos 8 caracteres.":"Password must be at least 8 characters.","No pudimos cambiar la contraseña. Pedí un enlace nuevo.":"We couldn't change your password. Request a new link.","Contraseña actualizada.":"Password updated.","La contraseña no coincide con la que escribiste en la pantalla anterior. La pedimos dos veces para evitar errores de tipeo.":"The password doesn't match the one you entered on the previous screen. We ask twice to help prevent typos.","La contraseña tiene que tener al menos 8 caracteres.":"Password must be at least 8 characters.","Si no lo ves, revisá la carpeta de spam.":"If you don't see it, check your spam folder.","¡Cuenta confirmada! Bienvenido/a a Match Empleos.":"Account confirmed! Welcome to Match Jobs.","Dos jóvenes mirando juntos un celular":"Two young people looking at a phone together","Joven sentada con un currículum en la mano junto a un maletín":"Young woman sitting with a resume beside a briefcase","Una joven con su currículum y un reclutador que se acercan a darse la mano":"A young woman with her resume and a recruiter approaching to shake hands","Dos personas trabajando juntas frente a una computadora":"Two people working together at a computer","Pie de página":"Footer","Situación actual":"Current situation"};
+        // Missing panel labels and selectable UI values discovered during the English UI audit.
+        const panelUiTranslations = {
+          "Denunciar empresa":"Report company",
+          "Cerrar":"Close",
+          "Seleccioná el motivo. El equipo de Match Empleos revisará el reporte.":"Select a reason. The Match Jobs team will review your report.",
+          "Motivo de denuncia":"Report reason",
+          "Seleccionar motivo":"Select a reason",
+          "Es una empresa falsa":"This is a fake company",
+          "Suplantación de identidad":"Identity theft or impersonation",
+          "Lenguaje inapropiado":"Inappropriate language",
+          "Condiciones Inaceptables":"Unacceptable conditions",
+          "Contenidos obscenos o de odio":"Obscene or hateful content",
+          "Spam o Confuso":"Spam or misleading content",
+          "Otros":"Other",
+          "Si elegiste Otros, contanos cuál":"If you selected Other, please specify",
+          "Describí brevemente lo sucedido":"Briefly describe what happened",
+          "Enviar denuncia":"Submit report",
+          "Todavía sin historial":"No history yet",
+          "todavía sin historial":"no history yet",
+          "contestadas a tiempo":"answered on time",
+          "tu demora promedio":"your average response time",
+          "Este número lo ven los candidatos antes de postularse.":"Candidates can see this figure before applying.",
+          "Tus búsquedas":"Your job posts",
+          "sin responder":"awaiting a response",
+          "al día":"up to date",
+          "Nueva búsqueda":"New job post",
+          "Tenés ":"You have ",
+          "postulaciones sin responder":"applications awaiting a response",
+          "Para publicar una búsqueda nueva primero tenés que contestarlas.":"You must respond to them before publishing a new job post.",
+          "Responder ahora":"Respond now",
+          "Puesto (por ejemplo: Mozo/a de salón)":"Job title (e.g. Restaurant server)",
+          "Jornada":"Work schedule",
+          "Turno":"Shift",
+          "Fin de semana":"Weekend",
+          "Rotativo":"Rotating",
+          "¿De qué se trata?":"What's the job about?",
+          "Contá las tareas y qué buscás en la persona":"Describe the tasks and what you're looking for in a candidate",
+          "Recomendado. Tu aviso aparece antes en el feed.":"Recommended. Your job post appears higher in the feed.",
+          "Tu compromiso de respuesta":"Your response commitment",
+          "Para publicar en Match Empleos tenés que elegir en cuánto tiempo vas a contestar. No es opcional: es lo que hace que los jóvenes se postulen.":"To publish on Match Jobs, you must choose how long you will take to respond. This is required and helps candidates feel confident about applying.",
+          "Si se te pasa el plazo, tu tasa de respuesta baja y los candidatos lo ven.":"If you miss the deadline, your response rate will drop and candidates will see it.",
+          "No podés publicar: tenés ":"You can't publish a job post: you have ",
+          "Publicar búsqueda":"Publish job post",
+          "Todas las búsquedas":"All job posts",
+          "Lo quiero conocer · hay match":"I'd like to meet · it's a match",
+          "Por ahora no":"Not moving forward",
+          "Todavía no hay candidatos en este filtro.":"There are no candidates in this filter yet.",
+          "Por qué se postuló":"Why they applied",
+          "Lo que sabe hacer":"Skills",
+          "Escribirle":"Message candidate",
+          "Cancelar":"Cancel",
+          "Contestale a ":"Reply to ",
+          "Elegí una respuesta. Podés editarla antes de enviarla; lo que está entre corchetes lo tenés que completar vos.":"Choose a response. You can edit it before sending; make sure to fill in anything in brackets.",
+          "Vista previa del mensaje":"Message preview",
+          "Te quedan ":"You have ",
+          "respuestas pendientes":"pending responses",
+          "Mi empresa":"My company",
+          "Completá los datos de tu empresa":"Complete your company details",
+          "sin historial todavía":"no response history yet",
+          "de demora":"average response time",
+          "Con 90% o más entrás en el grupo de empresas destacadas y tus búsquedas aparecen primero.":"With a response rate of 90% or higher, your company joins the featured group and your job posts appear first.",
+          "Historial de respuesta":"Response history",
+          "Datos empresariales":"Company details",
+          "Datos personales":"Personal details",
+          "Eliminar mi cuenta":"Delete my account",
+          "Ubicación / Localidad":"Location / City",
+          "Puesto buscado":"Desired job title",
+          "Experiencia laboral":"Work experience",
+          "Rubros (hasta tres)":"Industries (up to three)",
+          "Rubros":"Industries",
+          "Tipo de empleo":"Employment type",
+          "Modalidad":"Work arrangement",
+          "Horario":"Working hours",
+          "Sin completar":"Not provided",
+          "Sin cargar":"Not uploaded",
+          "Ver mi CV":"View my resume",
+          "Reemplazar CV":"Replace resume",
+          "Subir CV":"Upload resume",
+          "Generar CV con IA":"Generate resume with AI",
+          "Editar mis datos":"Edit my details",
+          "Editar datos personales":"Edit personal details",
+          "Editar datos de la empresa":"Edit company details",
+          "Nombre comercial de la empresa":"Company name",
+          "Responsable de la cuenta":"Account contact",
+          "Puesto a cubrir":"Position to fill",
+          "Tamaño de la empresa":"Company size",
+          "Sector":"Sector",
+          "Descripción de la empresa":"Company description",
+          "Editar datos empresariales":"Edit company details",
+          "Descripción":"Description",
+          "Completá tus datos para crear un currículum profesional compatible con sistemas ATS. También podés usar la IA como asistencia para mejorar el contenido.":"Complete your details to create an ATS-friendly resume. You can also use AI to help improve the content.",
+          "Conversaciones abiertas":"Open conversations",
+          "Lo que te respondieron las empresas":"Responses from companies",
+          "Elegí una conversación para leerla.":"Choose a conversation to read.",
+          "Todavía no tenés mensajes.":"You don't have any messages yet.",
+          "Cuando le respondas “Lo quiero conocer” a un candidato, se abre el chat.":"The chat opens when you respond to a candidate with “I'd like to meet”.",
+          "Cuando una empresa te responda o haya match, lo vas a ver acá.":"When a company responds or you get a match, you'll see it here.",
+          "No tenés novedades.":"No new notifications.",
+          "Marcar leídas":"Mark as read",
+          "Tu texto se envía al servicio de IA. El perfil no cambia hasta que elijas aplicar la sugerencia.":"Your text is sent to the AI service. Your profile won't change unless you choose to apply the suggestion.",
+          "La IA mejora la claridad y presentación sin agregar experiencias, datos ni características que no hayas mencionado.":"AI improves clarity and presentation without adding experience, facts, or details you haven't provided.",
+          "Revisá la propuesta y corregí lo que haga falta antes de aplicarla.":"Review the suggestion and make any necessary edits before applying it.",
+          "Escribí aquí":"Type here",
+          "CV cargado: ":"Resume uploaded: ",
+          "Ver detalle":"View details",
+          "Esta empresa responde:":"This company responds:",
+          "Empresa nueva":"New company",
+          "Todavía no tiene historial de respuestas en Match Empleos.":"This company has no response history on Match Jobs yet.",
+          "tarda en promedio":"average response time",
+          "Se comprometió a contestarte en ":"They committed to responding within ",
+          " días. Si no lo hace, su tasa baja y vos recibís un aviso.":" days. If they don't, their response rate will drop and you'll be notified.",
+          "Ya te postulaste":"You've already applied",
+          "Me interesa":"I'm interested",
+          "Te quedan ":"You have ",
+          " postulaciones esta semana":" applications left this week",
+          "Usaste tus 5 postulaciones de esta semana. Se libera tu cupo el lunes.":"You've used all 5 applications for this week. Your quota resets on Monday.",
+          "La empresa":"The company",
+          "tu postulación":"your application",
+          "La empresa respondió que por ahora no avanza.":"The company has decided not to move forward for now.",
+          "La empresa respondió tu postulación.":"The company responded to your application.",
+          "La empresa no respondió en el plazo de ":"The company did not respond within the ",
+          " días. Su tasa de respuesta bajó.":"-day deadline. Its response rate has dropped.",
+          "Te vieron. La empresa tiene ":"Your application was viewed. The company has ",
+          " para responderte.":" to respond.",
+          "Enviada ":"Submitted ",
+          "La empresa tiene ":"The company has ",
+          " para responderte.":" to respond.",
+          "¡Hay match con ":"It's a match with ",
+          "!: los dos dijeron que sí. Ya pueden hablar por chat.":"! You both said yes. You can now chat.",
+          " quiere saber un poco más":" wants to know a little more",
+          "Te escribió por ":"They messaged you about ",
+          ". Contestale en el chat.":". Reply in the chat.",
+          " no respondió a tiempo":" didn't respond in time",
+          "Pasó el plazo de ":"The ",
+          " días para ":"-day response deadline for ",
+          ". Su tasa de respuesta bajó y la ven todos los postulantes.":". Their response rate dropped, and all applicants can see it.",
+          "Se venció el plazo con ":"The response deadline has passed for ",
+          "Tu tasa bajó, pero todavía podés contestarle.":"Your response rate has dropped, but you can still reply.",
+          "Nueva postulación de ":"New application from ",
+          " · escribí el primer mensaje":" · write the first message",
+          "Vos: ":"You: ",
+          "Enviada recién":"Just submitted",
+          "Pausada":"Paused",
+          "Enviada":"Submitted",
+          "Vista":"Viewed",
+          "Respondida":"Responded",
+          "Sin experiencia":"No experience",
+          "Indistinto":"Any level",
+          "Presencial":"On-site",
+          "Remoto":"Remote",
+          "Híbrido":"Hybrid",
+          "Comercio":"Retail",
+          "Ventas":"Sales",
+          "Sistemas":"IT",
+          "Salud":"Healthcare",
+          "Otro":"Other",
+          "Hoy":"Today",
+          "Ayer":"Yesterday",
+          "hoy":"today",
+          "ayer":"yesterday",
+          "menos de 1 día":"less than 1 day",
+          "Plazo vencido":"Deadline passed",
+          "Vence hoy":"Due today",
+          "Vence en ":"Due in ",
+          "Empresa nueva: todavía no tiene historial de respuestas":"New company: no response history yet",
+          "Contesta a tiempo el ":"Responds on time to ",
+          " de las postulaciones": " of applications",
+          " · Match Empleos":" · Match Jobs",
+          "Match Empleos: Acá te contestan":"Match Jobs: Here, you get a response",
+          "Recuperar contraseña":"Reset password",
+          "Datos Personales":"Personal details",
+          "Si":"Yes",
+          "Elegi un area/sector":"Choose an area/sector",
+          "Crear mi cuenta":"Create my account",
+          "Cambiar foto":"Change photo",
+          "Cambiar logo":"Change logo",
+          "Foto de perfil":"Profile photo",
+          "Foto de la búsqueda en ":"Job post image at ",
+          "Empresa verificada manualmente":"Manually verified company",
+          "Empresa verificada":"Verified company"
+        };
+        entries.push(...Object.entries(panelUiTranslations));
         entries.push(...Object.entries(extraTranslations));
         entries.sort((a,b)=>b[0].length-a[0].length);
         function translate(value){

@@ -37,5 +37,5 @@ test("la página inglesa de ayuda está traducida íntegramente", () => {
 
 test("las páginas traducidas siguen usando las rutas públicas y la vista legal compartida", () => {
   assert.match(english, /if \(a === "privacidad" \|\| a === "terminos" \|\| a === "ayuda"\) return legalSite\(a\)/);
-  assert.match(english, /if \(a === "terminos" \|\| a === "ayuda"\) return legalApp\("c", b\)/);
+  assert.match(english, /case "legal":\s*return legalApp\("c", c\)/);\n  assert.match(english, /case "legal":\s*return legalApp\("e", c\)/);
 });

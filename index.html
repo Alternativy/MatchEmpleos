@@ -3420,6 +3420,14 @@
       .locale-trigger[aria-expanded="true"] .locale-chevron{transform:rotate(180deg)}
       .locale-menu{position:absolute;top:calc(100% + 8px);right:0;width:184px;padding:6px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:var(--navy2);box-shadow:0 14px 34px rgba(0,0,0,.28)}
       .locale-menu[hidden]{display:none}
+      /* Selector flotante dentro de los paneles de la aplicación */
+      .app-locale{position:fixed;z-index:40;right:20px;bottom:calc(84px + env(safe-area-inset-bottom,0px));}
+      .app-locale .locale-menu{top:auto;bottom:calc(100% + 8px);background:var(--navy2);border-color:rgba(255,255,255,.16)}
+      .app-locale .locale-trigger{background:var(--navy2);color:var(--white);border-color:rgba(255,255,255,.24)}
+      .app-locale .locale-trigger:hover,.app-locale .locale-trigger[aria-expanded="true"]{border-color:var(--green);color:var(--green)}
+      @media(min-width:900px){.app-locale{bottom:20px}}
+      @media(max-width:480px){.app-locale{right:14px;bottom:calc(82px + env(safe-area-inset-bottom,0px))}}
+
       .locale-option{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 12px;border:0;border-radius:10px;background:transparent;color:var(--white);text-align:left;font:500 14px var(--font)}
       .locale-option:hover,.locale-option[aria-selected="true"]{background:rgba(54,244,140,.12);color:var(--green)}
       .locale-option .locale-code{font-size:11px;color:var(--t2);letter-spacing:.08em}
@@ -4245,6 +4253,13 @@
           return 0;
         }
 
+        function appLocaleSwitcher() {
+          return `<div class="app-locale"><div class="locale-switcher">
+            <button class="locale-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma"><svg class="locale-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></svg><span class="locale-current">ES</span><span class="locale-chevron" aria-hidden="true">▾</span></button>
+            <div class="locale-menu" role="listbox" aria-label="Idioma" hidden><button class="locale-option" type="button" data-locale="es" role="option"><span>Español</span><span class="locale-code">ES</span></button><button class="locale-option" type="button" data-locale="en" role="option"><span>English</span><span class="locale-code">EN</span></button><button class="locale-option" type="button" data-locale="pt" role="option" disabled aria-disabled="true" title="Portuguese translation coming soon"><span>Português</span><span class="locale-code">PT</span></button></div>
+          </div></div>`;
+        }
+
         function shell(kind, active, inner, opts = {}) {
           const emp = kind === "e";
           const nav = emp ? ENAV : CNAV;
@@ -4258,7 +4273,7 @@
           const side = `<aside class="side-nav">${emp ? WM : WM_INV}${links}<a class="who" href="${emp ? "#/e/empresa" : "#/c/perfil"}" aria-label="Ir a mi perfil">${emp ? miNombre("e") : miNombre()}</a></aside>`;
           const rim = "#E9E9E9";
           const dock = `<div class="dock">${waveSVG("", emp ? "#002147" : "#36F48C", rim)}<div class="band"><nav class="nav-b" aria-label="Secciones">${links}</nav></div></div>`;
-          return `<div class="app has-nav ${emp ? "emp" : "cand"}">${side}<main class="screen${opts.cls ? " " + opts.cls : ""}">${inner}</main>${dock}</div>`;
+          return `<div class="app has-nav ${emp ? "emp" : "cand"}">${side}<main class="screen${opts.cls ? " " + opts.cls : ""}">${inner}</main>${dock}${appLocaleSwitcher()}</div>`;
         }
         function authShell(inner, kind = "c") {
           return `<div class="app auth ${kind === "e" ? "emp" : "cand"}"><main class="screen">${inner}</main><div class="dock plain">${waveSVG("", kind === "e" ? "#002147" : "#36F48C", "#E9E9E9")}<div class="band"></div></div></div>`;

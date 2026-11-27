@@ -54,3 +54,14 @@ test("el selector de idioma está junto a los enlaces de cuenta en la portada in
   assert.ok(start >= 0 && end > start);
   assert.ok(html.slice(start, end).includes('class="locale-switcher"'));
 });
+
+test("navCuenta conserva el selector cuando la landing reemplaza el header", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  const start = html.indexOf("function navCuenta()");
+  const end = html.indexOf("function home()", start);
+  assert.ok(start >= 0 && end > start);
+  const navCuenta = html.slice(start, end);
+  assert.match(navCuenta, /const languageSelector =/);
+  assert.match(navCuenta, /languageSelector/);
+  assert.match(navCuenta, /class="lp-account"/);
+});

@@ -42,3 +42,21 @@ test("la especificación incluye criterios de aceptación verificables", () => {
     assert.ok(spec.includes(criterion), `Falta criterio de aceptación: ${criterion}`);
   }
 });
+
+
+const englishPage = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+
+test("la landing inglesa incluye los títulos localizados pendientes", () => {
+  assert.match(englishPage, /<h2 id="quienes-titulo">Who we are<\/h2>/);
+  assert.match(englishPage, /<h2 id="cta-titulo">The future won’t wait\. Neither should you!<\/h2>/);
+});
+
+test("el nombre Match Empleos se conserva en el footer inglés", () => {
+  assert.match(englishPage, /2026 - Match Empleos - All rights reserved\./);
+  assert.doesNotMatch(englishPage, /2026 - Match Jobs - All rights reserved\./);
+});
+
+test("la estadística de desempleo en inglés se ajusta al ancho de su tarjeta", () => {
+  assert.match(englishPage, /<p>Unemployment among people aged 14–29, with an overall rate of 7\.5%\.<\/p>/);
+  assert.match(englishPage, /\.landing-v2 \.lp-stat:first-child p\s*\{[^}]*white-space: normal;[^}]*overflow-wrap: break-word;/s);
+});

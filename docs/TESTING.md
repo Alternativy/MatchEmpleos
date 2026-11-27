@@ -12,6 +12,13 @@
 
 **Importante:** el preview no reemplaza las pruebas de backend. Las operaciones que dependan de Supabase deben probarse contra staging. Nunca usar un preview para ejecutar pruebas destructivas sobre producción.
 
+
+### Advertencia de deprecación de Node.js en GitHub Actions
+
+En la ejecución [46030428260](https://github.com/Alternativy/MatchEmpleos/actions/runs/46030428260) apareció el aviso de que `actions/checkout@v4` y `actions/setup-node@v4` usan Node.js 20, que está deprecado y será forzado a ejecutarse con Node.js 24. El aviso no indica un fallo de los tests; la ejecución completó correctamente.
+
+**Pendiente:** actualizar las acciones a versiones compatibles con Node.js 24 (por ejemplo, `actions/checkout@v5` y `actions/setup-node@v5`) y verificar nuevamente el workflow.
+
 ## Ejecución local
 
 ```bash

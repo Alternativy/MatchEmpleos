@@ -2368,12 +2368,29 @@
         }
         .landing-v2 .lp-header nav {
           position: absolute;
-          left: calc(922 * var(--u));
+          right: calc(80 * var(--u));
+          left: auto;
           top: 0;
           height: 100%;
           display: flex;
           align-items: center;
-          gap: calc(61 * var(--u));
+          gap: calc(30 * var(--u));
+        }
+        .landing-v2 .lp-header nav .locale-switcher {
+          position: relative;
+          flex: 0 0 auto;
+        }
+        .landing-v2 .lp-header nav .locale-trigger {
+          min-height: 38px;
+          padding: 0 10px;
+          background: var(--navy);
+          border-color: rgba(255,255,255,.24);
+          box-shadow: none;
+        }
+        .landing-v2 .lp-header nav .locale-menu {
+          top: calc(100% + 8px);
+          right: 0;
+          z-index: 5;
         }
         .landing-v2 .lp-header nav a {
           color: var(--gray);
@@ -4298,12 +4315,18 @@
         function landingHref() {
           return ME.id ? (ME.rol === "e" ? "#/e/panel" : "#/c/feed") : "#/login";
         }
+        function headerLocaleSwitcher() {
+          return `<div class="locale-switcher">
+            <button class="locale-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Cambiar idioma"><svg class="locale-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="9.2"/><path d="M2.8 12h18.4M12 2.8c2.4 2.5 3.6 5.6 3.6 9.2s-1.2 6.7-3.6 9.2c-2.4-2.5-3.6-5.6-3.6-9.2S9.6 5.3 12 2.8Z"/></svg><span class="locale-current">ES</span><span class="locale-chevron" aria-hidden="true">▾</span></button>
+            <div class="locale-menu" role="listbox" aria-label="Idioma" hidden><button class="locale-option" type="button" data-locale="es" role="option"><span>Español</span><span class="locale-code">ES</span></button><button class="locale-option" type="button" data-locale="en" role="option"><span>English</span><span class="locale-code">EN</span></button></div>
+          </div>`;
+        }
         function navCuenta() {
-          if (!ME.id) return '<nav aria-label="Cuenta"><a href="#/login">Iniciar sesión</a><a href="#/registro">Registrarse</a></nav>';
+          if (!ME.id) return `<nav aria-label="Cuenta"><a href="#/login">Iniciar sesión</a>${headerLocaleSwitcher()}<a href="#/registro">Registrarse</a></nav>`;
           const emp = ME.rol === "e";
           const to = emp ? "#/e/panel" : "#/c/feed";
           const img = ME.avatarUrl || phSrc();
-          return `<nav aria-label="Cuenta"><a href="${emp ? "#/e/salir" : "#/c/salir"}">Cerrar sesión</a><a href="${to}" class="top-av" aria-label="Ir a ${emp ? "el panel" : "el feed"}"><img loading="lazy" decoding="async" src="${img}" alt="" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:#fff;display:block"></a></nav>`;
+          return `<nav aria-label="Cuenta"><a href="${emp ? "#/e/salir" : "#/c/salir"}">Cerrar sesión</a>${headerLocaleSwitcher()}<a href="${to}" class="top-av" aria-label="Ir a ${emp ? "el panel" : "el feed"}"><img loading="lazy" decoding="async" src="${img}" alt="" style="width:48px;height:48px;border-radius:12px;object-fit:cover;background:#fff;display:block"></a></nav>`;
         }
         function home() {
           const t = document.createElement("template");

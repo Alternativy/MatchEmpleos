@@ -16,3 +16,8 @@ test("las páginas de la app no contienen la errata de Sign up", async () => {
     assert.doesNotMatch(html, forbiddenText, `${label}: contiene una errata de traducción`);
   }
 });
+test("las traducciones se aplican en una sola pasada", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  assert.match(html, /value\.replace\(translationPattern,source=>translationMap\.get\(source\)\)/);
+  assert.doesNotMatch(html, /for\(const \[source,target\] of entries\).*result\.split\(source\)\.join\(target\)/);
+});

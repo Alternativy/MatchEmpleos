@@ -30,3 +30,8 @@ test("una traducción de palabra no modifica coincidencias dentro de palabras in
   assert.equal("Sign up".replace(wholeWordSi, "Yes"), "Sign up");
   assert.equal("Si tenés".replace(wholeWordSi, "Yes"), "Yes tenés");
 });
+
+test("el selector de idioma queda excluido del traductor automático", async () => {
+  const html = await readFile(new URL("../en/index.html", import.meta.url), "utf8");
+  assert.match(html, /node\.classList&&node\.classList\.contains\("locale-switcher"\)/);
+});

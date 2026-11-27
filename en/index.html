@@ -7525,11 +7525,9 @@ async function toggleBusqueda(id) {
         // Replace source-language matches in one pass so translated text is never
         // translated again (e.g. "Sign up" must not be changed by the "Si" entry).
         const translationMap=new Map(entries);
-        const translationPattern=new RegExp(entries.map(([source])=>source.replace(/[.*+?^${}()|[\]\\]/g,"\\        function translate(value){
-          let result=value;
-          for(const [source,target] of entries){if(result.includes(source))result=result.split(source).join(target);}
-          return result;
-        }")).join("|"),"g");
+        // Match original Spanish text once; never reprocess translated output.
+        const escapeRegex=source=>source.split("").map(char=>".^$*+?()[]{}|\\-".includes(char)?"\\"+char:char).join("");
+        const translationPattern=new RegExp(entries.map(([source])=>escapeRegex(source)).join("|"),"g");
         function translate(value){
           return value.replace(translationPattern,source=>translationMap.get(source));
         }

@@ -28,7 +28,7 @@ test("los paneles de postulantes y empresas incluyen el selector flotante", () =
   assert.match(html, /\.app-locale \.locale-menu\s*\{[^}]*bottom:\s*calc\(100% \+ 8px\)/, "El menú debe abrirse hacia arriba para no quedar fuera de pantalla");
 });
 
-test("los eventos del selector sobreviven a los re-renderizados", () => {
+test("los eventos del selector sobreviven a los re-renderizados", async () => {
   assert.match(html, /document\.addEventListener\("click",event=>\{[\s\S]*?event\.target\.closest\("\.locale-switcher"\)/, "Los eventos deben delegarse en document");
   for (const source of [html, await readFile(new URL("../en/index.html", import.meta.url), "utf8")]) {
     assert.match(source, /const localePath=selected==="en"\?"\/en\/"\:"\/"/, "Cada idioma debe resolver su prefijo de URL");

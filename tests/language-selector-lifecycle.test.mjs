@@ -30,6 +30,8 @@ test("los paneles de postulantes y empresas incluyen el selector flotante", () =
 
 test("los eventos del selector sobreviven a los re-renderizados", () => {
   assert.match(html, /document\.addEventListener\("click",event=>\{[\s\S]*?event\.target\.closest\("\.locale-switcher"\)/, "Los eventos deben delegarse en document");
-  assert.match(html, /if\(selected==="en"\)\{location\.assign\("\/en\/"\)/, "English debe conservar su navegación a /en/");
-  assert.match(html, /if\(selected==="es"\)\{location\.assign\("\/"\)/, "Español debe conservar su navegación a la raíz");
+  for ( (const source of [html, await readFile(new URL("../en/index.html", import.meta.url), "utf8")]) {
+    assert.match(source, /const localePath=selected==="en"\?"\/en\/"\:"\/"/, "Cada idioma debe resolver su prefijo de URL");
+    assert.match(source, /location\.assign\(localePath\+location\.search\+location\.hash\)/, "El cambio de idioma debe conservar la ruta interna del panel, la query y el hash");
+  }
 });

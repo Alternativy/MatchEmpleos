@@ -7527,7 +7527,8 @@ async function toggleBusqueda(id) {
         const translationMap=new Map(entries);
         // Match original Spanish text once; never reprocess translated output.
         const escapeRegex=source=>source.split("").map(char=>".^$*+?()[]{}|\\-".includes(char)?"\\"+char:char).join("");
-        const translationPattern=new RegExp(entries.map(([source])=>escapeRegex(source)).join("|"),"g");
+        const patternSource=source=>{const escaped=escapeRegex(source);return /^[\\p{L}\\p{N}]+$/u.test(source)?`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`:escaped;};
+        const translationPattern=new RegExp(entries.map(([source])=>patternSource(source)).join("|"),"gu");
         function translate(value){
           return value.replace(translationPattern,source=>translationMap.get(source));
         }

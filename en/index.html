@@ -7222,6 +7222,7 @@ async function toggleBusqueda(id) {
         function visit(node){
           if(node.nodeType===Node.TEXT_NODE){const next=translate(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;return;}
           if(node.nodeType!==Node.ELEMENT_NODE)return;
+          if(["SCRIPT","STYLE","NOSCRIPT"].includes(node.tagName))return;
           for(const attr of ["placeholder","aria-label","title","alt"]){if(node.hasAttribute(attr)){const value=node.getAttribute(attr),next=translate(value);if(next!==value)node.setAttribute(attr,next);}}
           if(node.tagName==="TITLE"){const next=translate(node.textContent);if(next!==node.textContent)node.textContent=next;}
           node.childNodes.forEach(visit);

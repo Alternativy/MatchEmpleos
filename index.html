@@ -7168,8 +7168,11 @@ async function toggleBusqueda(id) {
               const menu=root.querySelector(".locale-menu");
               menu.hidden=true;
               root.querySelector(".locale-trigger").setAttribute("aria-expanded","false");
-              if(selected==="en"){location.assign("/en/");return;}
-              if(selected==="es"){location.assign("/");return;}
+              if(selected==="en"||selected==="es"){
+                const localePath=selected==="en"?"/en/":"/";
+                location.assign(localePath+location.search+location.hash);
+                return;
+              }
               return;
             }
             document.querySelectorAll(".locale-switcher").forEach(item=>{

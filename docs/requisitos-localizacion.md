@@ -52,7 +52,8 @@ Las traducciones iniciales podrán generarse con IA. La revisión y corrección 
 ## Pendientes de implementación y verificación
 
 - [ ] Verificar por qué el Deploy Preview actual del PR #23 no refleja de forma visible la corrección del footer: `2026 - Match Empleos - All rights reserved.`. El texto ya está presente en `en/index.html` de la rama `localizacion`; falta comprobar que Netlify haya publicado el commit más reciente y descartar caché del navegador/CDN.
-- [ ] Implementar la localización completa de los paneles de la aplicación para inglés (`/en/`) y portugués (`/pt/`). La traducción actual de la landing no implica que las vistas internas estén localizadas.
+- [x] Incorporar traducciones de interfaz para los paneles de postulantes y empresas en inglés (`/en/`), incluyendo opciones seleccionables, formularios, reportes, publicaciones, postulaciones, perfiles, CV, mensajes, notificaciones, estados y fechas relativas. Se mantiene pendiente una auditoría visual y funcional completa.
+- [ ] Implementar la localización de los paneles en portugués (`/pt/`).
 
 ## Desafíos para localizar los paneles de la aplicación
 
@@ -71,7 +72,8 @@ La implementación deberá contemplar, como mínimo, los siguientes puntos:
 
 ### Criterios para considerar completa la localización de los paneles
 
-- [ ] Los paneles de postulantes y empresas están disponibles en inglés y portugués.
+- [x] Los paneles de postulantes y empresas cuentan con traducciones de interfaz en inglés.
+- [ ] Los paneles de postulantes y empresas están disponibles en portugués.
 - [ ] Los textos de interfaz, estados, validaciones, notificaciones y errores están localizados.
 - [ ] Los datos escritos por usuarios permanecen intactos y no se traducen automáticamente.
 - [ ] Los estados y valores internos de Supabase conservan sus identificadores; solo cambia su presentación.
